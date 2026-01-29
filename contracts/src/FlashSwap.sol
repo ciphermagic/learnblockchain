@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import "forge-std/console.sol";
 
 interface IUniswapV2Pair {
   function token0() external view returns (address);
@@ -45,13 +46,12 @@ contract FlashSwap {
   }
 
   constructor() {
-    // 默认地址（主网地址）
     uniswapV2Factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     uniswapV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     owner = msg.sender;
   }
 
-  // 新增：允许测试时设置工厂和路由器地址
+  // 允许测试时设置工厂和路由器地址
   function setUniswapAddresses(address factory, address router) external onlyOwner {
     uniswapV2Factory = factory;
     uniswapV2Router = router;
@@ -99,21 +99,30 @@ contract FlashSwap {
     );
 
     // 获取借到的代币数量
+    console.log(">>>>>>>>>>>>>>>>> Borrowed tokenA", amountBorrowed);
     uint256 amountReceived = amount0 > 0 ? amount0 : amount1;
+    console.log(">>>>>>>>>>>>>>>>> Expected TokenA:", amountReceived);
+    console.log(">>>>>>>>>>>>>>>>> Received TokenA:", IERC20(_tokenA).balanceOf(address(this)));
+    
 
     // 在 poolB 中将 tokenA 兑换为 tokenB
+    console.log(">>>>>>>>>>>>>>>>> In poolB, exchange tokenA to tokenB");
     _swapOnPool(poolB, _tokenA, _tokenB, amountReceived);
+    console.log(">>>>>>>>>>>>>>>>> Received TokenB:", IERC20(_tokenB).balanceOf(address(this)));
 
     // 计算需要还款的数量（包含手续费）
     uint256 amountToRepay = _calculateRepayAmount(amountBorrowed);
+    console.log(">>>>>>>>>>>>>>>>> Need repay TokenA:", amountToRepay);
 
     // 从amountOut中拿出一部分用于还款
     // 这里我们计算需要多少_tokenB来偿还所需的_tokenA（计算输出需要偿还的amountToRepay个A，需要输入多少个B）
     uint256 amountToSwapBack = _calculateAmountToSwapBack(msg.sender, _tokenB, amountToRepay);
+    console.log(">>>>>>>>>>>>>>>>> Need repay TokenB for TokenA in poolA:", amountToSwapBack);
 
     // 检查我们是否有足够多的_tokenB用于偿还_tokenA
     uint256 balanceOfTokenB = IERC20(_tokenB).balanceOf(address(this));
     require(balanceOfTokenB >= amountToSwapBack, 'Insufficient tokenB for repayment');
+    console.log(">>>>>>>>>>>>>>>>> balanceOfTokenB:", IERC20(_tokenB).balanceOf(address(this)));
 
     // 转移_tokenB给配对合约（msg.sender 是 poolA）
     IERC20(_tokenB).transfer(msg.sender, amountToSwapBack);
@@ -122,11 +131,12 @@ contract FlashSwap {
     // 这里不再直接调用swap，而是通过配对合约在swap结束时自动完成交换
     // 配对合约会验证我们是否返回了足够的_tokenA
 
-    // 由于我们已经发送了正确的amountToSwapBack到配对合约
-    // 并且我们计算了所需的还款金额，所以合约应该能验证通过
+    // 由于我们已经发送了正确的amountToSwapBack到配对合约A
+    // 并且我们计算了所需的还款金额，所以合约能验证通过
 
     // 计算利润
     uint256 remainingTokenB = IERC20(_tokenB).balanceOf(address(this));
+    console.log(">>>>>>>>>>>>>>>>> Remaining TokenB:", remainingTokenB);
 
     // 将剩余代币转给 owner
     if (remainingTokenB > 0) {
@@ -138,7 +148,7 @@ contract FlashSwap {
 
   // 执行交换
   function _swapOnPool(address pool, address tokenIn, address tokenOut, uint256 amountIn) internal {
-    IUniswapV2Pair pair = IUniswapV2Pair(pool);
+    IUniswapV2Pair pair = IUniswapV2Pair(pool); // poolB
     (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
 
     address _token0 = pair.token0();
@@ -149,6 +159,7 @@ contract FlashSwap {
 
     // 计算输出数量
     uint256 amountOut = IUniswapV2Router02(uniswapV2Router).getAmountOut(amountIn, reserveIn, reserveOut);
+    console.log(">>>>>>>>>>>>>>>>> Expected TokenB:", amountOut);
 
     // 转移代币到配对合约
     IERC20(tokenIn).transfer(pool, amountIn);
@@ -166,7 +177,7 @@ contract FlashSwap {
     address tokenIn,
     uint256 amountOutNeeded
   ) internal view returns (uint256 amountIn) {
-    IUniswapV2Pair pair = IUniswapV2Pair(pool);
+    IUniswapV2Pair pair = IUniswapV2Pair(pool); // poolA
     (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
 
     address _token0 = pair.token0();
