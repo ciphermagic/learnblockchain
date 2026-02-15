@@ -24,6 +24,7 @@
 - **📡 事件监听机制**：实时监听 ERC20、ETH 转账事件
 - **🧩 交易构建**：原生交易、签名交易、MPC 交易、EIP-7702 交易
 - **🛡️ 安全实践**：白名单验证、Merkle Tree、签名验证
+- **🏗️ 部署自动化**：完整的智能合约部署脚本，支持多网络部署
 
 ---
 
@@ -201,6 +202,19 @@ forge build
 forge inspect Counter abi --json > ../abis/Counter.json
 ```
 
+### 部署合约
+
+```bash
+cd contracts
+
+# 使用部署脚本部署合约 (示例)
+forge script script/Counter.s.sol:CounterScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast
+
+# 或在本地节点上部署 (需要先启动本地节点)
+anvil
+forge script script/Counter.s.sol:CounterScript --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --broadcast
+```
+
 ### 运行脚本
 
 ```bash
@@ -238,6 +252,7 @@ pnpm tsx scripts/simulator_example.ts
 6. **高级功能** 🚀
    - 探索 EIP-7702 授权
    - 实现链上数据分析
+   - 使用部署脚本部署合约到目标网络
 
 ---
 
