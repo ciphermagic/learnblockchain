@@ -32,58 +32,58 @@
 
 ### 智能合约模块 (contracts/src/)
 
-| 文件名 | 功能描述 |
-|--------|----------|
-| 🔹 基础功能合约 | |
-| Counter.sol | 计数器合约，用于演示基本的智能合约数据存储和状态修改功能 |
-| AbiEncode_Decode.sol | 用于测试ABI编码和解码机制的合约，演示如何正确编码和解码复杂数据结构 |
-| ArrayStorage.sol | 演示数组存储访问和操作优化技术的合约实现 |
-| 🔹 权限控制合约 | |
-| Owner.sol | 包含所有权控制功能的基础合约，实现基础的权限控制和所有者验证机制 |
-| MultiSigWallet.sol | 多签钱包合约，需要预设的多个签名者中多数同意才能执行交易 |
-| ContractWallet.sol | 多签合约钱包，实现钱包基本功能、交易提议和多重签名确认机制 |
-| 🔹 ERC-20代币合约 | |
-| BaseERC20.sol | 符合ERC-20标准的代币合约实现，提供代币转账、授权等功能 |
-| MyERC1363Token.sol | 支持ERC-1363标准的代币合约实现，提供转账并调用接收者合约的回调功能 |
-| PermitERC20.sol | 支持EIP-2612 Permit功能的ERC-20代币合约，允许无gas代币授权的离线签名 |
-| 🔹 ERC-721 NFT合约 | |
-| MinimalERC721.sol | 最小化的ERC-721 NFT合约实现，支持NFT铸造、转移和枚举功能 |
-| ERC721_Upgrade.sol | 可升级ERC-721 NFT合约，使用UUPS代理模式实现合约升级功能，支持NFT铸造、转移和权限管理 |
-| ERC721_Upgrade_V2.sol | 可升级ERC-721合约的V2版本，扩展了原有ERC721_Upgrade合约功能，添加版本标识和V2专属初始化方法 |
-| 🔹 NFT市场合约 | |
-| NFTMarketV1.sol | NFT市场合约的V1版本，支持NFT创建、购买、上架等基本市场功能 |
-| NFTMarketV2.sol | NFT市场合约的V2版本，支持升级代理模式，允许合约功能升级和数据迁移 |
-| AirdopMerkleNFTMarket.sol | 使用Merkle Tree实现的NFT市场空投合约，允许通过Merkle证明验证资格后领取空投 |
-| 🔹 代币银行合约 | |
-| TokenBank.sol | 代币银行合约，管理多种代币的存取、记录用户余额和处理存取款操作 |
-| TokenBankPermit.sol | 支持EIP-2612 Permit功能的代币银行合约，允许用户授权银行操作其代币 |
-| TokenBankPermit2.sol | 基于Permit2的TokenBank合约版本，支持更高级的代币授权和安全性 |
-| TokenBankReceiver.sol | 支持回调功能的TokenBank合约，当使用扩展ERC20的transferWithCallback功能转账时自动处理存款 |
-| 🔹 银行/金融合约 | |
-| Bank.sol | 简单的银行合约，提供存款、取款、余额查询等基础银行功能 |
-| BigBank.sol | 功能更复杂的银行合约，增加了利率计算、高级权限控制等更多功能 |
-| StakingPool.sol | 质押池合约，支持ETH质押获取KK代币奖励，集成借贷池实现资金管理和收益分配 |
-| 🔹 签名验证合约 | |
-| EIP712Verifier.sol | 实现EIP-712标准的消息签名验证合约，支持结构化数据的链下签名验证 |
-| 🔹 安全防护合约 | |
-| ReentrancyGuard.sol | 展示传统状态变量与现代瞬态存储两种重入攻击防护方法的合约，提供银行示例进行对比分析 |
-| Vault.sol | 智能合约升级漏洞与代理模式安全演示，通过fallback函数实现逻辑委托，包含可利用的安全漏洞以供学习 |
-| 🔹 DEX相关合约 | |
-| MemeFactory.sol | MEME代币最小代理工厂合约，提供部署和管理多个克隆代币的能力 |
-| MemeFactoryV2.sol | MEME代币工厂合约的V2版本，支持通过最小代理模式部署克隆代币，并与Uniswap集成实现流动性池功能 |
-| MiniSwapPool.sol | 简化版DEX池合约，实现流动性添加、移除和代币兑换功能，使用x*y=k恒定乘积算法 |
-| FlashSwap.sol | 闪电贷套利合约，使用Uniswap V2的闪电交换功能在不同流动性池之间进行无本金套利交易 |
-| 🔹 特殊功能合约 | |
-| AssemblyChangeOwner.sol | 演示如何使用内联汇编更改合约所有者的高级合约示例 |
-| SchoolMappingList.sol | 用于演示映射和列表数据结构的学校管理系统合约，实现学生信息管理 |
-| SchoolOptimized.sol | 优化的学校管理系统合约，使用更高效的存储模式降低成本和提升性能 |
-| 🔹 预售/释放合约 | |
-| IDO.sol | Initial DEX Offering合约，实现代币预售、认领、退款等功能，支持软硬顶和时间限制 |
-| Vesting.sol | 代币锁定释放合约，实现12个月锁定期和24个月线性释放机制，支持查询进度和提取已解锁代币 |
-| 🔹 白名单合约 | |
-| Whitelist.sol | 实现三种白名单验证方法的合约：mapping存储、EIP-712签名验证和Merkle Tree验证 |
-| 🔹 Oracle相关合约 | |
-| OracleSimple.sol | 简单的价格预言机合约，用于获取和更新链下价格数据 |
+| 文件名 | 功能描述 | 测试&部署 |
+|--------|----------|----------|
+| 🔹 基础功能合约 | | |
+| Counter.sol | 计数器合约，用于演示基本的智能合约数据存储和状态修改功能 | test/Counter.t.sol<br>script/Counter.s.sol |
+| AbiEncode_Decode.sol | 用于测试ABI编码和解码机制的合约，演示如何正确编码和解码复杂数据结构 | test/AbiEncodeDecode.t.sol<br>script/AbiEncode_Decode.s.sol |
+| ArrayStorage.sol | 演示数组存储访问和操作优化技术的合约实现 | script/ArrayStorage.s.sol |
+| 🔹 权限控制合约 | | |
+| Owner.sol | 包含所有权控制功能的基础合约，实现基础的权限控制和所有者验证机制 | script/Owner.s.sol |
+| MultiSigWallet.sol | 多签钱包合约，需要预设的多个签名者中多数同意才能执行交易 | test/MultiSigWallet.t.sol<br>script/MultiSigWallet.s.sol |
+| ContractWallet.sol | 多签合约钱包，实现钱包基本功能、交易提议和多重签名确认机制 | script/ContractWallet.s.sol |
+| 🔹 ERC-20代币合约 | | |
+| BaseERC20.sol | 符合ERC-20标准的代币合约实现，提供代币转账、授权等功能 | script/BaseERC20.s.sol |
+| MyERC1363Token.sol | 支持ERC-1363标准的代币合约实现，提供转账并调用接收者合约的回调功能 | script/MyERC1363Token.s.sol |
+| PermitERC20.sol | 支持EIP-2612 Permit功能的ERC-20代币合约，允许无gas代币授权的离线签名 | script/PermitERC20.s.sol |
+| 🔹 ERC-721 NFT合约 | | |
+| MinimalERC721.sol | 最小化的ERC-721 NFT合约实现，支持NFT铸造、转移和枚举功能 | script/MinimalERC721.s.sol |
+| ERC721_Upgrade.sol | 可升级ERC-721 NFT合约，使用UUPS代理模式实现合约升级功能，支持NFT铸造、转移和权限管理 | test/ERC721_Upgrade.t.sol<br>script/ERC721_Upgrade.s.sol |
+| ERC721_Upgrade_V2.sol | 可升级ERC-721合约的V2版本，扩展了原有ERC721_Upgrade合约功能，添加版本标识和V2专属初始化方法 | script/ERC721_Upgrade_V2.s.sol |
+| 🔹 NFT市场合约 | | |
+| NFTMarketV1.sol | NFT市场合约的V1版本，支持NFT创建、购买、上架等基本市场功能 | test/NFTMarketV1.t.sol<br>script/NFTMarketV1.s.sol |
+| NFTMarketV2.sol | NFT市场合约的V2版本，支持升级代理模式，允许合约功能升级和数据迁移 | test/NFTMarketV2.t.sol<br>script/NFTMarketV2.s.sol |
+| AirdopMerkleNFTMarket.sol | 使用Merkle Tree实现的NFT市场空投合约，允许通过Merkle证明验证资格后领取空投 | test/AirdopMerkleNFTMarket.t.sol<br>script/AirdopMerkleNFTMarket.s.sol |
+| 🔹 代币银行合约 | | |
+| TokenBank.sol | 代币银行合约，管理多种代币的存取、记录用户余额和处理存取款操作 | test/TokenBank.t.sol<br>script/TokenBank.s.sol |
+| TokenBankPermit.sol | 支持EIP-2612 Permit功能的代币银行合约，允许用户授权银行操作其代币 | script/TokenBankPermit.s.sol |
+| TokenBankPermit2.sol | 基于Permit2的TokenBank合约版本，支持更高级的代币授权和安全性 | script/TokenBankPermit2.s.sol |
+| TokenBankReceiver.sol | 支持回调功能的TokenBank合约，当使用扩展ERC20的transferWithCallback功能转账时自动处理存款 | script/TokenBankReceiver.s.sol |
+| 🔹 银行/金融合约 | | |
+| Bank.sol | 简单的银行合约，提供存款、取款、余额查询等基础银行功能 | script/Bank.s.sol |
+| BigBank.sol | 功能更复杂的银行合约，增加了利率计算、高级权限控制等更多功能 | script/BigBank.s.sol |
+| StakingPool.sol | 质押池合约，支持ETH质押获取KK代币奖励，集成借贷池实现资金管理和收益分配 | script/StakingPool.s.sol |
+| 🔹 签名验证合约 | | |
+| EIP712Verifier.sol | 实现EIP-712标准的消息签名验证合约，支持结构化数据的链下签名验证 | script/EIP712Verifier.s.sol |
+| 🔹 安全防护合约 | | |
+| ReentrancyGuard.sol | 展示传统状态变量与现代瞬态存储两种重入攻击防护方法的合约，提供银行示例进行对比分析 | test/ReentrancyGuard.t.sol<br>script/ReentrancyGuard.s.sol |
+| Vault.sol | 智能合约升级漏洞与代理模式安全演示，通过fallback函数实现逻辑委托，包含可利用的安全漏洞以供学习 | test/Vault.t.sol<br>script/Vault.s.sol |
+| 🔹 DEX相关合约 | | |
+| MemeFactory.sol | MEME代币最小代理工厂合约，提供部署和管理多个克隆代币的能力 | test/MemeFactory.t.sol<br>script/MemeFactory.s.sol |
+| MemeFactoryV2.sol | MEME代币工厂合约的V2版本，支持通过最小代理模式部署克隆代币，并与Uniswap集成实现流动性池功能 | test/MemeFactoryV2.t.sol<br>script/MemeFactoryV2.s.sol |
+| MiniSwapPool.sol | 简化版DEX池合约，实现流动性添加、移除和代币兑换功能，使用x*y=k恒定乘积算法 | script/MiniSwapPool.s.sol |
+| FlashSwap.sol | 闪电贷套利合约，使用Uniswap V2的闪电交换功能在不同流动性池之间进行无本金套利交易 | test/FlashSwap.t.sol<br>script/FlashSwap.s.sol |
+| 🔹 特殊功能合约 | | |
+| AssemblyChangeOwner.sol | 演示如何使用内联汇编更改合约所有者的高级合约示例 | script/AssemblyChangeOwner.s.sol |
+| SchoolMappingList.sol | 用于演示映射和列表数据结构的学校管理系统合约，实现学生信息管理 | script/SchoolMappingList.s.sol |
+| SchoolOptimized.sol | 优化的学校管理系统合约，使用更高效的存储模式降低成本和提升性能 | script/SchoolOptimized.s.sol |
+| 🔹 预售/释放合约 | | |
+| IDO.sol | Initial DEX Offering合约，实现代币预售、认领、退款等功能，支持软硬顶和时间限制 | script/IDO.s.sol |
+| Vesting.sol | 代币锁定释放合约，实现12个月锁定期和24个月线性释放机制，支持查询进度和提取已解锁代币 | test/Vesting.t.sol<br>script/Vesting.s.sol |
+| 🔹 白名单合约 | | |
+| Whitelist.sol | 实现三种白名单验证方法的合约：mapping存储、EIP-712签名验证和Merkle Tree验证 | script/Whitelist.s.sol |
+| 🔹 Oracle相关合约 | | |
+| OracleSimple.sol | 简单的价格预言机合约，用于获取和更新链下价格数据 | test/OracleSimple.t.sol<br>script/OracleSimple.s.sol |
 
 ### 前端模块 (app/)
 
