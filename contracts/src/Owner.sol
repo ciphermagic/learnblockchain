@@ -4,18 +4,18 @@ pragma solidity ^0.8.13;
 /**
  * @title Owner
  * @dev 简单的所有权管理合约，提供所有权转移功能
- * 注意：此合约包含一些额外的未使用状态变量（可能是用于测试或示例目的）
+ * 注意：此合约包含一些额外的未使用状态变量
  */
 contract Owner {
     // 合约所有者地址
     address public owner;
-    // 未使用的状态变量（可能用于测试目的）
+    // 未使用的状态变量
     uint8 public x;
-    // 未使用的状态变量（可能用于测试目的）
+    // 未使用的状态变量
     address public owner2;
-    // 未使用的状态变量（可能用于测试目的）
+    // 未使用的状态变量
     uint public y;
-    // 未使用的状态变量（可能用于测试目的）
+    // 未使用的状态变量
     address public owner3;
 
 
