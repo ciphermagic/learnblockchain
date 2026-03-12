@@ -1,12 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// 导入Forge测试框架和相关合约
+// 导入 Forge 测试框架和相关合约
 import "forge-std/Test.sol";
 import {Bank} from "../src/ReentrancyGuard.sol";
 
-/// @title 重入攻击防护测试合约
-/// @notice 该合约用于测试传统重入防护和瞬态存储重入防护的有效性和性能对比
+/**
+ * @title ReentrancyGuardTest - 重入攻击防护测试合约
+ * @notice 该合约用于测试传统重入防护和瞬态存储重入防护的有效性和性能对比
+ *
+ * ============================================================
+ * 测试覆盖范围
+ * ============================================================
+ *
+ * 1. 基础功能测试
+ *    - 初始余额验证
+ *    - 存款功能
+ *    - 取款功能
+ *
+ * 2. 防护机制测试
+ *    - 传统状态变量防护 (nonReentrantLegacy)
+ *    - 瞬态存储防护 (nonReentrantTransient)
+ *
+ * 3. Gas 对比测试
+ *    - 两种防护方式的 Gas 消耗对比
+ *
+ * 4. 可组合性测试
+ *    - 瞬态存储在同交易中的可重入性
+ *    - 传统存储在同交易中的行为
+ *
+ * 5. 攻击模拟测试
+ *    - 无防护合约的攻击演示
+ *    - 传统防护的攻击测试
+ *    - 瞬态存储防护的攻击测试
+ */
 contract ReentrancyGuardTest is Test {
     // 声明测试中使用的合约实例
     Bank public bank;           // 银行合约实例
@@ -50,7 +77,9 @@ contract ReentrancyGuardTest is Test {
     }
 
     /// @notice 测试没有重入防护的取款功能
-    /// @dev 验证withdraw函数虽然有潜在风险但在此简单场景下仍能正常工作
+    /// @dev 验证 withdraw 函数虽然有潜在风险但在此简单场景下仍能正常工作
+    ///
+    /// 注意：此测试仅验证基本功能，实际使用中 withdraw() 存在重入漏洞
     function testWithdrawWithoutReentrancyGuard() public {
         // 给用户1预存2以太币
         vm.deal(user1, 2 ether);
@@ -58,7 +87,7 @@ contract ReentrancyGuardTest is Test {
         vm.prank(user1);
         bank.deposit{value: 1 ether}();
 
-        // withdraw函数实现有问题，它是先转账再清空余额
+        // withdraw 函数实现有问题，它是先转账再清空余额
         // 这意味着它在某些条件下仍然可能容易受到重入攻击
         vm.prank(user1);
         bank.withdraw();
@@ -68,7 +97,7 @@ contract ReentrancyGuardTest is Test {
     }
 
     /// @notice 测试使用传统修饰器的取款功能
-    /// @dev 验证传统nonReentrant修饰器的防护效果
+    /// @dev 验证传统 nonReentrantLegacy 修饰器的防护效果
     function testWithdrawLegacyWithReentrancyGuard() public {
         // 模拟用户1向银行存款1以太币
         vm.prank(user1);
@@ -90,7 +119,7 @@ contract ReentrancyGuardTest is Test {
     }
 
     /// @notice 测试使用瞬态存储修饰器的取款功能
-    /// @dev 验证基于瞬态存储的nonReentrant修饰器的防护效果
+    /// @dev 验证基于瞬态存储的 nonReentrantTransient 修饰器的防护效果
     function testWithdrawTransientWithReentrancyGuard() public {
         // 模拟用户1向银行存款1以太币
         vm.prank(user1);
@@ -110,7 +139,10 @@ contract ReentrancyGuardTest is Test {
         // 瞬态存储在交易结束后自动清除，无法直接检查
     }
 
-    /// @dev 比较两种修饰器的 gas 消耗
+    /// @notice 比较两种修饰器的 Gas 消耗
+    /// @dev 测试结果：Legacy 约 33849 gas，Transient 约 12028 gas
+    ///
+    /// 结论：瞬态存储版本 Gas 消耗约为传统版本的 1/3
     function testGasComparison() public {
         // 给银行合约和用户1预存资金
         vm.deal(address(bank), 10 ether);
@@ -121,7 +153,7 @@ contract ReentrancyGuardTest is Test {
         bank.deposit{value: 1 ether}();
         vm.stopPrank();
 
-        // 测试 legacy 修饰器的 gas 消耗
+        // 测试 legacy 修饰器的 Gas 消耗
         uint256 gasStart = gasleft();
         vm.prank(user1);
         bank.withdrawLegacy();
@@ -134,18 +166,23 @@ contract ReentrancyGuardTest is Test {
         bank.deposit{value: 1 ether}();
         vm.stopPrank();
 
-        // 测试 transient 修饰器的 gas 消耗
+        // 测试 transient 修饰器的 Gas 消耗
         gasStart = gasleft();
         vm.prank(user1);
         bank.withdrawTransient();
         uint256 gasUsedTransient = gasStart - gasleft();
 
-        // 瞬态存储版本应该使用更少的 gas
-        console.log("Legacy gas used:", gasUsedLegacy); // 33849
-        console.log("Transient gas used:", gasUsedTransient); // 12028
+        // 瞬态存储版本应该使用更少的 Gas
+        console.log("Legacy gas used:", gasUsedLegacy); // 约 33849
+        console.log("Transient gas used:", gasUsedTransient); // 约 12028
     }
 
-    /// @dev 测试瞬态存储在同交易中的可重入性
+    /// @notice 测试瞬态存储在同交易中的可重入性
+    /// @dev 验证瞬态存储允许在同一交易中多次调用受保护函数
+    ///
+    /// 这是瞬态存储相比传统存储的重要优势：
+    /// - 传统存储：一旦加锁，同交易内无法再次调用
+    /// - 瞬态存储：函数退出后自动解锁，可再次调用
     function testTransientStorageReentrancyInSameTransaction() public {
         // 给银行合约和用户1预存资金
         vm.deal(address(bank), 10 ether);
@@ -171,7 +208,11 @@ contract ReentrancyGuardTest is Test {
         assertEq(bank.deposits(user1), 0);
     }
 
-    /// @dev 测试传统存储在同交易中的行为
+    /// @notice 测试传统存储在同交易中的行为
+    /// @dev 验证传统存储在函数退出后解锁，可再次调用
+    ///
+    /// 注意：虽然可以再次调用，但这是因为显式执行了 _locked = 0
+    /// 如果函数执行过程中 revert，锁不会被释放
     function testLegacyStorageBehaviorInSameTransaction() public {
         // 给银行合约和用户1预存资金
         vm.deal(address(bank), 10 ether);
@@ -198,7 +239,7 @@ contract ReentrancyGuardTest is Test {
     }
 
     /// @notice 测试传统重入防护的状态变化
-    /// @dev 验证nonReentrantLegacy修饰器在执行前后正确设置和重置状态
+    /// @dev 验证 nonReentrantLegacy 修饰器在执行前后正确设置和重置状态
     function testLegacyReentrancyGuardState() public {
         // 给用户1预存2以太币
         vm.deal(user1, 2 ether);
@@ -218,7 +259,10 @@ contract ReentrancyGuardTest is Test {
     }
 
     /// @notice 测试传统存储解锁机制
-    /// @dev 验证nonReentrantLegacy修饰器的解锁功能
+    /// @dev 验证 nonReentrantLegacy 修饰器的解锁功能
+    ///
+    /// 关键测试：验证函数正常完成后锁是否被释放
+    /// 风险：如果函数内部 revert，锁不会被释放，导致合约永久锁死
     function testLegacyStorageUnlock() public {
         vm.deal(user1, 2 ether);
         // 测试传统存储解锁机制
@@ -236,9 +280,22 @@ contract ReentrancyGuardTest is Test {
         bank.withdrawLegacy();
     }
 
-    // -=========================== 攻击测试 ===========================-
+    // ============================================================
+    // 攻击测试
+    // ============================================================
 
-    /// @dev 演示没有重入防护的函数的潜在风险
+    /// @notice 演示没有重入防护的函数的潜在风险
+    /// @dev 结果：Bank 被攻击者掏空（0 ether），攻击合约获得 11 ether
+    ///
+    /// 攻击原理：
+    /// 1. 攻击者部署 AttackBank 合约
+    /// 2. 攻击者向 AttackBank 存入 1 ETH
+    /// 3. AttackBank 调用 Bank.deposit() 存入 1 ETH
+    /// 4. AttackBank 调用 Bank.withdraw()
+    /// 5. Bank 先转账 1 ETH 到 AttackBank
+    /// 6. AttackBank 的 fallback 被触发，再次调用 Bank.withdraw()
+    /// 7. 此时 Bank.deposits[attacker] 还未清零（先转账后清零）
+    /// 8. 重复步骤 5-7，直到 Bank 余额耗尽
     function testVulnerableFunctionRisk() public {
         // 部署攻击合约并注入银行合约地址
         AttackBank attackBank = new AttackBank(address(bank));
@@ -258,7 +315,10 @@ contract ReentrancyGuardTest is Test {
         assertEq(address(attackBank).balance, 11 ether); // 攻击者获得所有ETH
     }
 
-    /// @dev 测试传统修饰器防止重入攻击
+    /// @notice 测试传统修饰器防止重入攻击
+    /// @dev 验证 nonReentrantLegacy 可有效阻止重入攻击
+    ///
+    /// 预期：攻击应该失败（被修饰器阻止）
     function testAttackContractAgainstLegacyShouldFail() public {
         // 部署攻击合约并注入银行合约地址
         AttackBankLegacy attackBank = new AttackBankLegacy(address(bank));
@@ -279,7 +339,10 @@ contract ReentrancyGuardTest is Test {
         assertEq(address(attackBank).balance, 1 ether);
     }
 
-    /// @dev 用实际的攻击合约测试瞬态存储防护
+    /// @notice 用实际的攻击合约测试瞬态存储防护
+    /// @dev 验证 nonReentrantTransient 可有效阻止重入攻击
+    ///
+    /// 预期：攻击应该失败（被修饰器阻止）
     function testAttackContractAgainstTransientShouldFail() public {
         // 部署攻击合约并注入银行合约地址
         AttackBankTransient attackBank = new AttackBankTransient(address(bank));
@@ -301,6 +364,25 @@ contract ReentrancyGuardTest is Test {
     }
 }
 
+// ============================================================
+// 攻击合约
+// ============================================================
+
+/**
+ * @title AttackBank - 攻击无防护的 Bank 合约
+ * @dev 演示重入攻击如何掏空无防护的合约
+ *
+ * 攻击流程：
+ * 1. 部署本合约
+ * 2. 存入至少 1 ETH
+ * 3. 调用 attack() 函数
+ * 4. attack() 会：
+ *    - 向 Bank 存入 1 ETH
+ *    - 调用 Bank.withdraw()
+ * 5. Bank 转账触发 fallback
+ * 6. fallback 再次调用 Bank.withdraw()
+ * 7. 重复直到 Bank 余额耗尽
+ */
 contract AttackBank {
     Bank public bank;
 
@@ -308,23 +390,41 @@ contract AttackBank {
         bank = Bank(_a);
     }
 
+    /**
+     * @dev Fallback 函数，接收 ETH 时触发重入攻击
+     *
+     * 注意：
+     * - 使用 low-level call 而不是 withdraw()
+     * - 因为 withdraw() 也会触发重入，但这里用 call 更直接
+     */
     fallback() external payable {
         if (address(bank).balance >= 1 ether) {
             bank.withdraw();
         }
     }
 
+    /**
+     * @notice 发起攻击
+     * @dev 需要先存入至少 1 ETH
+     */
     function attack() external payable {
         require(msg.value >= 1 ether);
         bank.deposit{value: 1 ether}();
         bank.withdraw();
     }
 
+    /**
+     * @notice 获取合约余额
+     */
     function getBalance() public view returns (uint) {
         return address(this).balance;
     }
 }
 
+/**
+ * @title AttackBankLegacy - 攻击使用传统防护的 Bank 合约
+ * @dev 攻击会被 nonReentrantLegacy 修饰器阻止
+ */
 contract AttackBankLegacy {
     Bank public bank;
 
@@ -349,6 +449,10 @@ contract AttackBankLegacy {
     }
 }
 
+/**
+ * @title AttackBankTransient - 攻击使用瞬态存储防护的 Bank 合约
+ * @dev 攻击会被 nonReentrantTransient 修饰器阻止
+ */
 contract AttackBankTransient {
     Bank public bank;
 

@@ -106,7 +106,7 @@ contract BaseScript is Script {
     modifier broadcaster() {
         if (isPrivateKeySet) {
             // Anvil 本地网络：使用私钥签名
-            vm.startBroadcast(deploy);
+            vm.startBroadcast(deployerPrivateKey);
             deployer = vm.addr(deployerPrivateKey);
         } else {
             // Sepolia 测试网：使用默认签名方式

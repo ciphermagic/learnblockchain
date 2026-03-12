@@ -145,7 +145,8 @@ ETHERSCAN_API_KEY=your_etherscan_api_key
 - `MinimalERC721.s.sol`: ERC-721 NFT 部署
 - `NFTMarketV2.s.sol`: NFT 市场（可升级版本）部署
 - `TokenBank.s.sol`: 代币银行部署
-- `MultiSigWallet.s.sol`: 多签钱包部署
+- `ProposalMultiSigWallet.s.sol`: 提案型多签钱包部署
+- `TransactionMultiSigWallet.s.sol`: 交易型多签钱包部署
 
 **部署命令模板**：
 ```bash

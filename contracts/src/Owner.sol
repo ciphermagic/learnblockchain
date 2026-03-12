@@ -9,14 +9,6 @@ pragma solidity ^0.8.13;
 contract Owner {
     // 合约所有者地址
     address public owner;
-    // 未使用的状态变量
-    uint8 public x;
-    // 未使用的状态变量
-    address public owner2;
-    // 未使用的状态变量
-    uint public y;
-    // 未使用的状态变量
-    address public owner3;
 
 
     /**

@@ -3,45 +3,78 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-
+/**
+ * @title TokenBankPermit
+ * @notice 支持EIP-2612 Permit功能的代币银行合约
+ * @dev 核心改进：
+ *      1. 传统存款：deposit() - 需要用户先approve
+ *      2. Permit存款：permitDeposit() - 用户通过链下签名授权，一笔交易完成授权+存款
+ *
+ *      Permit存款的优势：
+ *      - 用户体验：一笔交易完成授权+存款，节省gas和时间
+ *      - 无需ETH：用户可以在没有ETH的情况下授权代币（元交易）
+ *      - 安全性：使用EIP-712签名，防止重放攻击
+ *
+ *      工作流程：
+ *      1. 用户在链下签名授权消息（包含owner、spender、value、nonce、deadline）
+ *      2. 用户（或第三方）调用permitDeposit()，提交签名和存款金额
+ *      3. 合约调用token.permit()验证签名并执行授权
+ *      4. 合约立即调用transferFrom()转移代币
+ *      5. 更新用户的存款记录
+ *
+ *      适用场景：
+ *      - 改善用户体验，减少交易步骤
+ *      - 支持元交易（meta-transaction）
+ *      - 与支持EIP-2612的代币（如USDC、DAI）配合使用
+ */
 contract TokenBankPermit {
-    // 代币合约地址
+    /// @notice 代币合约接口
     IERC20 public token;
 
-    // 记录每个用户存入的代币数量
+    /// @notice 记录每个用户存入的代币数量
     mapping(address => uint256) public deposits;
 
-    // 存款和取款事件
+    /// @notice 存款事件
     event Deposit(address indexed user, uint256 amount);
+
+    /// @notice 取款事件
     event Withdraw(address indexed user, uint256 amount);
 
-    // 构造函数，设置代币合约地址
+    /**
+     * @notice 构造函数，设置代币合约地址
+     * @param _tokenAddress ERC20代币合约地址（必须支持EIP-2612 Permit）
+     */
     constructor(address _tokenAddress) {
         require(_tokenAddress != address(0), "TokenBank: token address cannot be zero");
         token = IERC20(_tokenAddress);
     }
 
-    // 存入代币
+    /**
+     * @notice 传统存入代币方式（需要先approve）
+     * @param _amount 存入数量
+     * @dev 前置条件：用户必须先调用token.approve(address(this), _amount)
+     */
     function deposit(uint256 _amount) external {
-        // 检查金额是否大于0
         require(_amount > 0, "TokenBank: deposit amount must be greater than zero");
-
-        // 检查用户是否有足够的代币
         require(token.balanceOf(msg.sender) >= _amount, "TokenBank: insufficient token balance");
 
-        // 将代币从用户转移到合约
-        // 注意：用户需要先调用token.approve(tokenBank地址, 金额)来授权TokenBank合约
         bool success = token.transferFrom(msg.sender, address(this), _amount);
         require(success, "TokenBank: transfer failed");
 
-        // 更新用户的存款记录
         deposits[msg.sender] += _amount;
 
-        // 触发存款事件
         emit Deposit(msg.sender, _amount);
     }
 
-    // 使用EIP2612 permit功能进行存款
+    /**
+     * @notice 使用EIP-2612 Permit功能进行存款（无需先approve）
+     * @param _amount 存入数量
+     * @param deadline 签名有效期截止时间（Unix时间戳）
+     * @param v 签名参数v
+     * @param r 签名参数r
+     * @param s 签名参数s
+     * @dev 一笔交易完成授权+存款，改善用户体验
+     */
     function permitDeposit(
         uint256 _amount,
         uint256 deadline,
@@ -49,10 +82,7 @@ contract TokenBankPermit {
         bytes32 r,
         bytes32 s
     ) external {
-        // 检查金额是否大于0
         require(_amount > 0, "TokenBank: deposit amount must be greater than zero");
-
-        // 检查用户是否有足够的代币
         require(token.balanceOf(msg.sender) >= _amount, "TokenBank: insufficient token balance");
 
         // 调用token的permit函数进行授权
@@ -68,33 +98,34 @@ contract TokenBankPermit {
         bool success = token.transferFrom(msg.sender, address(this), _amount);
         require(success, "TokenBank: transfer failed");
 
-        // 更新用户的存款记录
         deposits[msg.sender] += _amount;
 
-        // 触发存款事件
         emit Deposit(msg.sender, _amount);
     }
 
-    // 提取代币
+    /**
+     * @notice 提取代币
+     * @param _amount 提取数量
+     * @dev 安全机制：先减少记录再转账，防止重入攻击
+     */
     function withdraw(uint256 _amount) external {
-        // 检查金额是否大于0
         require(_amount > 0, "TokenBank: withdraw amount must be greater than zero");
-
-        // 检查用户是否有足够的存款
         require(deposits[msg.sender] >= _amount, "TokenBank: insufficient deposit balance");
 
-        // 更新用户的存款记录（先减少记录，再转账，防止重入攻击）
+        // 先减少记录，防止重入攻击
         deposits[msg.sender] -= _amount;
 
-        // 将代币从合约转移回用户
         bool success = token.transfer(msg.sender, _amount);
         require(success, "TokenBank: transfer failed");
 
-        // 触发提款事件
         emit Withdraw(msg.sender, _amount);
     }
 
-    // 查询用户在银行中的存款余额
+    /**
+     * @notice 查询用户在银行中的存款余额
+     * @param _user 用户地址
+     * @return 存款余额
+     */
     function balanceOf(address _user) external view returns (uint256) {
         return deposits[_user];
     }

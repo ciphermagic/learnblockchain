@@ -6,23 +6,34 @@ import "forge-std/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../src/FlashSwap.sol";
 
-// 为 Mock 合约添加的接口定义
+/// @dev Uniswap V2 回调接口
 interface IUniswapV2Callee {
     function uniswapV2Call(address sender, uint amount0, uint amount1, bytes calldata data) external;
 }
 
+/**
+ * @title MockERC20
+ * @dev 用于测试的 ERC20 代币
+ */
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
+    /// @dev 铸造代币
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 
+    /// @dev 销毁代币
     function burn(address from, uint256 amount) public {
         _burn(from, amount);
     }
 }
 
+/**
+ * @title MockUniswapV2Pair
+ * @dev 用于测试的 Mock Uniswap V2 配对合约
+ *      模拟闪电贷功能
+ */
 contract MockUniswapV2Pair is IUniswapV2Pair {
     address public token0;
     address public token1;
@@ -95,6 +106,10 @@ contract MockUniswapV2Pair is IUniswapV2Pair {
     }
 }
 
+/**
+ * @title MockUniswapV2Factory
+ * @dev 用于测试的 Mock Uniswap V2 工厂合约
+ */
 contract MockUniswapV2Factory is IUniswapV2Factory {
     mapping(address => mapping(address => address)) public getPair;
 
@@ -104,8 +119,12 @@ contract MockUniswapV2Factory is IUniswapV2Factory {
     }
 }
 
+/**
+ * @title MockUniswapV2Router
+ * @dev 用于测试的 Mock Uniswap V2 路由合约
+ */
 contract MockUniswapV2Router is IUniswapV2Router02 {
-    // Uniswap V2 公式计算函数
+    /// @dev 根据输入数量和储备计算输出数量（Uniswap V2 公式）
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) external pure returns (uint amountOut) {
         require(amountIn > 0, "UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "UniswapV2Library: INSUFFICIENT_LIQUIDITY");
@@ -124,6 +143,11 @@ contract MockUniswapV2Router is IUniswapV2Router02 {
     }
 }
 
+/**
+ * @title FlashSwapTest
+ * @dev FlashSwap 合约的测试套件
+ *      测试闪电贷套利功能
+ */
 contract FlashSwapTest is Test {
     FlashSwap public flashSwap;
     MockERC20 public tokenA;

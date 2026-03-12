@@ -7,12 +7,14 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC1363.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+/// @notice 模拟 ERC1363 代币（用于测试）
 contract MockERC1363 is ERC1363 {
     constructor() ERC20("Payment Token", "PTK") {
         _mint(msg.sender, 1_000_000 ether);
     }
 }
 
+/// @notice 模拟 NFT 合约（用于测试）
 contract MockNFT is ERC721 {
     constructor() ERC721("MockNFT", "MNFT") {}
 
@@ -21,6 +23,24 @@ contract MockNFT is ERC721 {
     }
 }
 
+/**
+ * @title NFTMarketV2Test
+ * @notice NFT 市场 V2 版本的测试套件（专注于签名上架功能）
+ * @dev 测试覆盖：
+ * - 签名上架成功场景
+ * - 签名过期验证
+ * - 签名者验证
+ * - 签名重放攻击防护
+ * - 授权验证
+ * - 消息哈希生成验证
+ *
+ * 测试策略：
+ * - 使用真实的私钥和地址进行签名测试
+ * - 使用 vm.sign 生成符合 EIP-191 标准的签名
+ * - 验证签名防重放机制
+ * - 验证签名过期机制
+ * - 验证权限控制
+ */
 contract NFTMarketV2Test is Test {
     NFTMarketV2 public nftMarket;
     MockERC1363 public paymentToken;
@@ -28,13 +48,26 @@ contract NFTMarketV2Test is Test {
     uint256 public deadline;
 
     address public owner = address(this);
+    /// @notice 使用 Hardhat 默认账户 #0 作为 seller（方便签名测试）
     address public seller = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+    /// @notice seller 的私钥（Hardhat 默认账户 #0 的私钥）
     uint256 private constant SELLER_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    /// @notice 中继者地址（任何人都可以提交签名）
     address public relayer = makeAddr("relayer");
 
     uint256 public constant TOKEN_ID = 1;
     uint256 public constant PRICE = 100 ether;
 
+    /**
+     * @notice 测试初始化函数
+     * @dev 执行流程：
+     * 1. 部署支付代币
+     * 2. 部署 NFT 市场 V2（使用 UUPS 代理）
+     * 3. 部署模拟 NFT 合约
+     * 4. 铸造 NFT 给 seller
+     * 5. seller 授权市场合约操作所有 NFT（setApprovalForAll）
+     * 6. 设置签名截止时间（当前时间 + 1 天）
+     */
     function setUp() public {
         paymentToken = new MockERC1363();
 
@@ -59,7 +92,10 @@ contract NFTMarketV2Test is Test {
         deadline = block.timestamp + 1 days;
     }
 
-    // 生成签名消息哈希（与合约内 getListingMessageHash 一致）
+    /**
+     * @notice 生成签名消息哈希（与合约内 getListingMessageHash 一致）
+     * @dev 用于测试中生成签名前的消息哈希
+     */
     function _getMessageHash(
         address nftContract,
         uint256 tokenId,
@@ -77,7 +113,13 @@ contract NFTMarketV2Test is Test {
         );
     }
 
-    // 生成 EIP-712 风格的 eth-signed message hash 并签名
+    /**
+     * @notice 生成 EIP-191 标准签名
+     * @param messageHash 消息哈希（已添加 EIP-191 前缀）
+     * @param privateKey 私钥
+     * @return 签名（65 字节：r + s + v）
+     * @dev 使用 vm.sign 生成符合以太坊标准的签名
+     */
     function _signMessage(bytes32 messageHash, uint256 privateKey) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, messageHash);
         return abi.encodePacked(r, s, v);

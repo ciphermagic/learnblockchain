@@ -5,7 +5,10 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/MemeFactoryV2.sol";
 
-// Mock Uniswap V2 Router for testing
+/**
+ * @title MockUniswapV2Router
+ * @dev 用于测试的 Mock Uniswap V2 Router 合约
+ */
 contract MockUniswapV2Router is IUniswapV2Router02 {
     address private _weth;
     mapping(address => mapping(address => address)) public pairs;
@@ -22,6 +25,7 @@ contract MockUniswapV2Router is IUniswapV2Router02 {
         return address(0); // Mock factory address
     }
 
+    /// @dev Mock 添加 ETH 流动性
     function addLiquidityETH(
         address token,
         uint amountTokenDesired,
@@ -35,10 +39,11 @@ contract MockUniswapV2Router is IUniswapV2Router02 {
         console.log("amountETHMin", amountETHMin);
         console.log("to", to);
         console.log("deadline", deadline);
-        // Mock implementation - just return the input values
+        // Mock 实现 - 直接返回输入值
         return (amountTokenDesired, msg.value, msg.value + amountTokenDesired);
     }
 
+    /// @dev Mock 添加流动性
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -58,31 +63,32 @@ contract MockUniswapV2Router is IUniswapV2Router02 {
         return (amountADesired, amountBDesired, amountADesired + amountBDesired);
     }
 
+    /// @dev Mock 获取兑换金额
     function getAmountsOut(uint amountIn, address[] calldata path)
     external pure override returns (uint[] memory amounts) {
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
-        // Mock: assume 1 ETH = 20000 tokens for favorable pricing
-        // Token price is 0.0001 ether = 100000000000000 wei
-        // So 1 ETH should give us 1e18/100000000000000 = 10000 tokens at initial price
-        // We make Uniswap give 20000 tokens (2x better)
+        // Mock: 假设 1 ETH = 20000 tokens（优于初始价格）
         if (path.length == 2) {
             amounts[1] = amountIn * 20000;
         }
     }
 
+    /// @dev Mock 支持费用代币的兑换
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint amountOutMin,
         address[] calldata path,
         address to,
         uint deadline
     ) external payable override {
-        // Mock implementation - we'll handle token transfer in test
-        // In real implementation, this would transfer tokens to 'to' address
+        // Mock 实现
     }
 }
 
-// Mock WETH contract
+/**
+ * @title MockWETH
+ * @dev 用于测试的 Mock WETH 合约
+ */
 contract MockWETH {
     mapping(address => uint256) public balanceOf;
 
@@ -97,6 +103,11 @@ contract MockWETH {
     }
 }
 
+/**
+ * @title MemeFactoryV2Test
+ * @dev MemeFactoryV2 合约的测试套件
+ *      测试 V2 版本的工厂合约：代币部署、铸造、流动性添加、购买等
+ */
 contract MemeFactoryV2Test is Test {
     MemeFactoryV2 public factory;
     MockUniswapV2Router public mockRouter;

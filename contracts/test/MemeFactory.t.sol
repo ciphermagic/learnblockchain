@@ -4,6 +4,11 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/MemeFactory.sol";
 
+/**
+ * @title MemeFactoryTest
+ * @dev MemeFactory 合约的测试套件
+ *      测试工厂合约的基本功能：代币部署、铸造、费用分配等
+ */
 contract MemeFactoryTest is Test {
     MemeFactory public factory;
     address public projectOwner;
@@ -14,8 +19,9 @@ contract MemeFactoryTest is Test {
     string constant SYMBOL = "MEME";
     uint256 constant TOTAL_SUPPLY = 1000000 * 10 ** 18; // 1,000,000 tokens
     uint256 constant PER_MINT = 1000 * 10 ** 18;       // 1,000 tokens per mint
-    uint256 constant PRICE = 0.0001 ether;           // 0.0001 ETH per token
+    uint256 constant PRICE = 0.0001 ether;              // 0.0001 ETH per token
 
+    /// @dev 测试前置设置
     function setUp() public {
         projectOwner = makeAddr("projectOwner");
         creator = makeAddr("creator");
@@ -29,6 +35,7 @@ contract MemeFactoryTest is Test {
         factory = new MemeFactory(projectOwner);
     }
 
+    /// @dev 测试代币部署功能
     function testDeployInscription() public {
         vm.startPrank(creator);
 
@@ -53,6 +60,7 @@ contract MemeFactoryTest is Test {
         assertEq(deployToken.memeCreator(), creator, "Incorrect creator");
     }
 
+    /// @dev 测试代币铸造和费用分配功能
     function testMintInscription() public {
         // 部署代币
         vm.startPrank(creator);
@@ -82,7 +90,7 @@ contract MemeFactoryTest is Test {
         assertEq(token.balanceOf(buyer), PER_MINT, "Incorrect minted amount");
         assertEq(token.mintedAmount(), PER_MINT, "Incorrect total minted amount");
 
-        // 验证费用分配
+        // 验证费用分配：项目方 1%，创建者 99%
         uint256 projectFee = (requiredAmount * factory.PROJECT_FEE_PERCENT()) / 100;
         uint256 creatorFee = requiredAmount - projectFee;
 
@@ -90,6 +98,7 @@ contract MemeFactoryTest is Test {
         assertEq(creator.balance, initialCreatorBalance + creatorFee, "Incorrect creator fee");
     }
 
+    /// @dev 测试多次铸造功能
     function testMintMultipleTimes() public {
         // 部署代币
         vm.startPrank(creator);
@@ -130,6 +139,7 @@ contract MemeFactoryTest is Test {
         assertEq(finalToken.mintedAmount(), PER_MINT * (testMints + 1), "Incorrect final minted amount");
     }
 
+    /// @dev 测试部署多个不同代币的功能
     function testDeployMultipleDifferentTokens() public {
         // 定义三个不同的代币参数
         string memory name1 = "DogeKing";
@@ -158,9 +168,6 @@ contract MemeFactoryTest is Test {
         vm.deal(creator1, 5 ether);
         vm.deal(creator2, 5 ether);
         vm.deal(creator3, 5 ether);
-
-        // 记录工厂初始已部署代币数量（应该为 0）
-        // 注意：deployedTokens 是 mapping，无法直接统计总数，我们通过事件或地址数组来验证
 
         address token1;
         address token2;

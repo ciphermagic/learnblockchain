@@ -7,12 +7,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// Uniswap V2 Router 接口
+// Uniswap V2 Router 接口定义
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
 
     function WETH() external pure returns (address);
 
+    /// @dev 添加两种 ERC20 代币的流动性
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -24,6 +25,7 @@ interface IUniswapV2Router01 {
         uint deadline
     ) external returns (uint amountA, uint amountB, uint liquidity);
 
+    /// @dev 添加 ETH 与 ERC20 代币的流动性
     function addLiquidityETH(
         address token,
         uint amountTokenDesired,
@@ -33,10 +35,13 @@ interface IUniswapV2Router01 {
         uint deadline
     ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
 
+    /// @dev 根据输入数量获取兑换路径的输出数量
     function getAmountsOut(uint amountIn, address[] calldata path) external pure returns (uint[] memory amounts);
 }
 
+/// @dev Uniswap V2 Router V02 版本，增加对转账手续费代币的支持
 interface IUniswapV2Router02 is IUniswapV2Router01 {
+    /// @dev 支持费用代币的 ETH 兑换（防止 _transferFeeToken 攻击）
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint amountOutMin,
         address[] calldata path,
@@ -46,19 +51,27 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
 }
 
 /**
- * @title MemeToken
- * @dev 实现基本的 ERC20 代币，用于创建 Meme 代币
+ * @title MemeTokenV2
+ * @dev 基于 ERC20Upgradeable 的 Meme 代币实现（V2 版本）
+ *      支持通过工厂合约铸造代币，以及为流动性池铸造代币
  */
 contract MemeTokenV2 is Initializable, ERC20Upgradeable {
+    /// @dev 代币创建者地址
     address public memeCreator;
-    address public factory;  // 添加工厂合约地址变量
+    /// @dev 工厂合约地址
+    address public factory;
+    /// @dev 代币总供应量
     uint256 public totalSupply_;
+    /// @dev 每次铸造的数量（刻字模式）
     uint256 public perMint;
+    /// @dev 每个代币的价格（wei）
     uint256 public price;
+    /// @dev 已铸造的代币总量
     uint256 public mintedAmount;
 
     /**
      * @dev 初始化 Meme 代币
+     * @param _name 代币名称
      * @param _symbol 代币符号
      * @param _totalSupply 总供应量
      * @param _perMint 每次铸造的数量
@@ -83,17 +96,17 @@ contract MemeTokenV2 is Initializable, ERC20Upgradeable {
         perMint = _perMint;
         price = _price;
         memeCreator = _creator;
-        factory = msg.sender;  // 设置工厂合约地址为调用初始化函数的地址
+        factory = msg.sender;
         mintedAmount = 0;
     }
 
     /**
-     * @dev 铸造新的代币
+     * @dev 铸造新的代币（用户购买时调用）
      * @param to 接收者地址
      * @return 是否成功
      */
     function mint(address to) external returns (bool) {
-        require(msg.sender == factory, "Only factory can mint");  // 使用存储的工厂地址
+        require(msg.sender == factory, "Only factory can mint");
         require(mintedAmount + perMint <= totalSupply_, "Exceeds total supply");
 
         mintedAmount += perMint;
@@ -102,7 +115,7 @@ contract MemeTokenV2 is Initializable, ERC20Upgradeable {
     }
 
     /**
-     * @dev 工厂合约铸造代币用于添加流动性
+     * @dev 为添加流动性铸造代币
      * @param to 接收者地址
      * @param amount 铸造数量
      */
@@ -117,28 +130,38 @@ contract MemeTokenV2 is Initializable, ERC20Upgradeable {
 }
 
 /**
- * @title Meme_Factory
- * @dev 使用最小代理模式创建 Meme 代币的工厂合约，并添加流动性
+ * @title MemeFactoryV2
+ * @dev Meme 代币工厂合约 V2 版本
+ *      在 V1 基础上增加了：
+ *      1. 自动为代币添加 Uniswap 流动性
+ *      2. 支持通过 DEX 购买代币（buyMeme 函数）
+ *      3. 费用比例调整为 5%（用于添加流动性）
+ *
+ * @notice 首次铸造时，5% 费用用于添加流动性，95% 给创建者
  */
 contract MemeFactoryV2 is Ownable {
     using Clones for address;
 
-    // 项目方地址
+    /// @dev 项目方地址
     address public projectOwner;
-    // 项目方费用比例（5%）
+    /// @dev 项目方费用比例（5%，用于添加流动性）
     uint256 public constant PROJECT_FEE_PERCENT = 5;
-    // 基础代币实现
+    /// @dev 基础代币实现合约地址
     address public implementation;
-    // 已部署的代币地址映射
+    /// @dev 记录已部署的代币
     mapping(address => bool) public deployedTokens;
-    // 每个代币是否已添加流动性
+    /// @dev 记录是否已添加流动性
     mapping(address => bool) public liquidityAdded;
-    // Uniswap V2 Router 地址
+    /// @dev Uniswap V2 Router 地址
     IUniswapV2Router02 public uniswapRouter;
 
+    /// @dev 新代币部署事件
     event MemeDeployed(address indexed tokenAddress, address indexed creator, string symbol, uint256 totalSupply, uint256 perMint, uint256 price);
+    /// @dev 代币铸造事件
     event MemeMinted(address indexed tokenAddress, address indexed buyer, uint256 amount, uint256 paid);
+    /// @dev 流动性添加事件
     event LiquidityAdded(address indexed tokenAddress, uint256 tokenAmount, uint256 ethAmount, uint256 liquidity);
+    /// @dev 代币购买事件
     event MemeBought(address indexed tokenAddress, address indexed buyer, uint256 amount, uint256 paid);
 
     /**
@@ -191,8 +214,9 @@ contract MemeFactoryV2 is Ownable {
     }
 
     /**
-     * @dev 铸造 Meme 代币
+     * @dev 铸造 Meme 代币（购买刻字）
      * @param tokenAddr 代币地址
+     * @notice 首次铸造时，5% 费用自动用于添加 Uniswap 流动性
      */
     function mintInscription(address tokenAddr) external payable {
         require(deployedTokens[tokenAddr], "Token not deployed by this factory");
@@ -232,9 +256,11 @@ contract MemeFactoryV2 is Ownable {
     }
 
     /**
-     * @dev 通过Uniswap购买Meme代币
+     * @dev 通过 Uniswap 购买 Meme 代币
      * @param tokenAddr 代币地址
      * @param minTokenAmount 最小代币数量
+     * @notice 需要先添加流动性才能使用此功能
+     * @dev 只有当 DEX 价格优于初始价格时才允许购买
      */
     function buyMeme(address tokenAddr, uint256 minTokenAmount) external payable {
         require(deployedTokens[tokenAddr], "Token not deployed by this factory");
@@ -272,7 +298,8 @@ contract MemeFactoryV2 is Ownable {
     /**
      * @dev 添加初始流动性
      * @param tokenAddr 代币地址
-     * @param ethAmount ETH数量
+     * @param ethAmount 用于添加流动性的 ETH 数量
+     * @notice 使用初始价格计算代币数量，流动性代币归项目方所有
      */
     function _addInitialLiquidity(address tokenAddr, uint256 ethAmount) internal {
         MemeTokenV2 token = MemeTokenV2(tokenAddr);
@@ -311,16 +338,14 @@ contract MemeFactoryV2 is Ownable {
     }
 
     /**
-     * @dev 更新Uniswap Router地址
-     * @param _newRouter 新的Uniswap Router地址
+     * @dev 更新 Uniswap Router 地址
+     * @param _newRouter 新的 Uniswap Router 地址
      */
     function updateUniswapRouter(address _newRouter) external onlyOwner {
         require(_newRouter != address(0), "Invalid router address");
         uniswapRouter = IUniswapV2Router02(_newRouter);
     }
 
-    /**
-     * @dev 允许合约接收ETH
-     */
+    /// @dev 允许合约接收 ETH
     receive() external payable {}
 }

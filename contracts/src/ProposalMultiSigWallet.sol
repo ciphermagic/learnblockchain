@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 /**
- * @title MultiSigWallet - 多签钱包合约
- * @notice 这是一个多签名钱包合约，支持多个持有者共同管理资金和执行交易
+ * @title ProposalMultiSigWallet - 提案型多签钱包合约
+ * @notice 这是一个基于提案模式的多签名钱包合约，支持多个持有者共同管理资金和执行交易
  * @dev 实现了提案-确认-执行的三步流程，确保交易安全性
  *
  * 核心功能：
@@ -15,10 +15,8 @@ pragma solidity ^0.8.19;
  * - 多签门槛：默认为持有者数量的 2/3
  * - 防重复确认：每个持有者只能确认一次
  * - 防重复执行：已执行的提案无法再次执行
- *
- * code generate by AI for demo
  */
-contract MultiSigWallet {
+contract ProposalMultiSigWallet {
     // 提案结构
     struct Proposal {
         address target;        // 目标合约地址

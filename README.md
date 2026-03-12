@@ -40,8 +40,8 @@
 | ArrayStorage.sol | 演示数组存储访问和操作优化技术的合约实现 | script/ArrayStorage.s.sol |
 | 🔹 权限控制合约 | | |
 | Owner.sol | 包含所有权控制功能的基础合约，实现基础的权限控制和所有者验证机制 | script/Owner.s.sol |
-| MultiSigWallet.sol | 多签钱包合约，需要预设的多个签名者中多数同意才能执行交易 | test/MultiSigWallet.t.sol<br>script/MultiSigWallet.s.sol |
-| ContractWallet.sol | 多签合约钱包，实现钱包基本功能、交易提议和多重签名确认机制 | script/ContractWallet.s.sol |
+| ProposalMultiSigWallet.sol | 提案型多签钱包合约，采用提案-确认-执行模式，需要预设的多个签名者中多数同意才能执行交易 | test/ProposalMultiSigWallet.t.sol<br>script/ProposalMultiSigWallet.s.sol |
+| TransactionMultiSigWallet.sol | 交易型多签钱包合约，实现钱包基本功能、交易提议和多重签名确认机制 | script/TransactionMultiSigWallet.s.sol |
 | 🔹 ERC-20代币合约 | | |
 | BaseERC20.sol | 符合ERC-20标准的代币合约实现，提供代币转账、授权等功能 | script/BaseERC20.s.sol |
 | MyERC1363Token.sol | 支持ERC-1363标准的代币合约实现，提供转账并调用接收者合约的回调功能 | script/MyERC1363Token.s.sol |
@@ -234,7 +234,7 @@ pnpm tsx scripts/simulator_example.ts
    - 运行 `viem-counter` 前端示例
 
 2. **权限控制** 🔐
-   - 学习 `Ownable.sol` 和 `MultiSigWallet.sol`
+   - 学习 `Ownable.sol`、`ProposalMultiSigWallet.sol` 和 `TransactionMultiSigWallet.sol`
    - 实践多签钱包的创建和使用
 
 3. **签名技术** ✍️

@@ -7,6 +7,11 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "forge-std/Test.sol";
 
+/**
+ * @title MockPaymentToken
+ * @notice 模拟支付代币合约（支持ERC20、ERC20Permit、ERC1363）
+ * @dev 用于测试AirdopMerkleNFTMarket合约
+ */
 contract MockPaymentToken is ERC20, ERC20Permit, ERC1363 {
     constructor()
     ERC20("MockPaymentToken", "MockPaymentToken")
@@ -19,6 +24,11 @@ contract MockPaymentToken is ERC20, ERC20Permit, ERC1363 {
     }
 }
 
+/**
+ * @title MockNFT
+ * @notice 模拟NFT合约
+ * @dev 用于测试AirdopMerkleNFTMarket合约
+ */
 contract MockNFT is ERC721 {
     constructor() ERC721("MockNFT", "MockNFT") {}
     function mint(address to, uint256 tokenId) public {
@@ -26,6 +36,11 @@ contract MockNFT is ERC721 {
     }
 }
 
+/**
+ * @title AirdopMerkleNFTMarketTest
+ * @notice AirdopMerkleNFTMarket合约的测试套件
+ * @dev 测试覆盖：上架、购买、白名单验证、Mercle证明、multicall等
+ */
 contract AirdopMerkleNFTMarketTest is Test {
 
     AirdopMerkleNFTMarket public market; // NFT市场合约实例
@@ -44,6 +59,10 @@ contract AirdopMerkleNFTMarketTest is Test {
     bytes32 public merkleRoot;
     bytes32[] public whitelistProof;
 
+    /**
+     * @notice 测试前置设置
+     * @dev 部署模拟合约、设置白名单、分配测试代币
+     */
     function setUp() public {
 
         // 部署模拟代币合约
@@ -66,7 +85,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         paymentToken.mint(nonWhitelistedBuyer, 1000 * 10 ** 18); // 1000 tokens
     }
 
-    // 测试上架NFT成功的情况
+    /**
+     * @notice 测试上架NFT成功
+     * @dev 验证seller可以成功上架NFT，上架信息正确存储
+     */
     function testListNFTSuccess() public {
         vm.startPrank(seller);
 
@@ -85,7 +107,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试普通购买NFT成功的情况
+    /**
+     * @notice 测试普通购买NFT成功
+     * @dev 验证buyer可以购买NFT，代币和NFT所有权正确转移
+     */
     function testBuyNFTSuccess() public {
         // 先上架NFT
         vm.startPrank(seller);
@@ -115,7 +140,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试白名单验证功能
+    /**
+     * @notice 测试白名单验证功能
+     * @dev 验证Merkle树验证机制正确工作
+     */
     function testIsWhitelisted() public view {
         // 验证白名单用户
         assertTrue(market.isWhitelisted(whitelistedBuyer, whitelistProof));
@@ -125,7 +153,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         assertFalse(market.isWhitelisted(nonWhitelistedBuyer, emptyProof));
     }
 
-    // 测试白名单用户优惠购买NFT成功的情况
+    /**
+     * @notice 测试白名单用户优惠购买NFT成功
+     * @dev 验证白名单用户享受50%折扣购买，hasUsedWhitelist标记正确
+     */
     function testClaimNFTSuccess() public {
         // 先上架NFT
         vm.startPrank(seller);
@@ -159,7 +190,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试非白名单用户尝试优惠购买NFT失败的情况
+    /**
+     * @notice 测试非白名单用户优惠购买失败
+     * @dev 验证非白名单用户无法使用claimNFT
+     */
     function testClaimNFTFailureNotWhitelisted() public {
         // 先上架NFT
         vm.startPrank(seller);
@@ -179,7 +213,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试白名单用户重复使用优惠失败的情况
+    /**
+     * @notice 测试白名单用户重复使用优惠失败
+     * @dev 验证防重复使用机制，每人只能使用一次优惠
+     */
     function testClaimNFTFailureAlreadyUsed() public {
         // 先上架两个NFT
         vm.startPrank(seller);
@@ -205,7 +242,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试使用multicall组合调用permitPrePay和claimNFT
+    /**
+     * @notice 测试multicall组合调用permitPrePay和claimNFT
+     * @dev 验证EIP-2612签名和multicall批量调用正确工作
+     */
     function testMulticallPermitAndClaim() public {
         // 先上架NFT
         vm.startPrank(seller);
@@ -274,7 +314,10 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
     }
 
-    // 测试更新Merkle根
+    /**
+     * @notice 测试更新Merkle根
+     * @dev 验证updateMerkleRoot函数可以更新merkleRoot
+     */
     function testUpdateMerkleRoot() public {
         bytes32 newMerkleRoot = keccak256(abi.encodePacked("new merkle root"));
 

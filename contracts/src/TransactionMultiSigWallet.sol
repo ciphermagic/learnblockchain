@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// @title 多签钱包合约
-// @notice 这是一个支持多人签名的钱包合约，可以用于团队资金管理
-contract ContractWallet {
+// @title 交易型多签钱包合约
+// @notice 这是一个基于交易模式的多签名钱包合约，支持多人签名的钱包管理
+// @dev 实现了交易提交-确认-执行的三步流程，支持撤销确认功能
+contract TransactionMultiSigWallet {
     // 记录存款事件，包含发送者地址、存款金额和合约余额
     event Deposit(address indexed sender, uint amount, uint balance);
     // 记录提交交易事件，包含交易索引、提交者地址、目标地址、转账金额和调用数据
