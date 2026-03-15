@@ -57,8 +57,7 @@ contract MinimalERC721 is ERC721, ERC721Enumerable {
      * - 建议添加最大供应量限制
      */
     function mint(address to) public returns (uint256) {
-        uint256 tokenId = _tokenIdCounter;
-        _tokenIdCounter++;
+        uint256 tokenId = _tokenIdCounter++;
         _mint(to, tokenId);
         return tokenId;
     }
