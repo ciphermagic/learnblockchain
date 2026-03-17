@@ -78,7 +78,6 @@ contract TokenBankReceiver is TokenBank, IERC1363Receiver {
         uint256 amount,       // 转账金额
         bytes calldata data   // 附加数据
     ) external override returns (bytes4) {
-        require(msg.sender == operator, "NFTMarket: caller is not the operator");
         // 验证调用者是代币合约，防止恶意合约调用
         require(msg.sender == address(token), "TokenBankV2: caller is not the token contract");
 

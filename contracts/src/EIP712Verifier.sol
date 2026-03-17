@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
+import '@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol';
 
 /**
  * @title EIP712Verifier - EIP-712 签名验证合约
@@ -30,144 +31,209 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
  * - 用户可签名授权向某地址转账
  * - 合约验证签名后执行转账
  */
-contract EIP712Verifier is EIP712 {
+contract EIP712Verifier is EIP712, ReentrancyGuardTransient {
+  // 使用 ECDSA 库进行签名恢复
+  using ECDSA for bytes32;
 
-    // 使用 ECDSA 库进行签名恢复
-    using ECDSA for bytes32;
+  // ============================================================
+  // 数据结构定义
+  // ============================================================
 
-    // ============================================================
-    // 数据结构定义
-    // ============================================================
+  /**
+   * @title Send - 转账数据结构
+   * @dev EIP-712 类型定义
+   *
+   * 字段：
+   * - to: 收款人地址
+   * - value: 转账金额（wei）
+   */
+  struct Send {
+    address to; // 收款人地址
+    uint256 value; // 转账金额
+  }
 
-    /**
-     * @title Send - 转账数据结构
-     * @dev EIP-712 类型定义
-     *
-     * 字段：
-     * - to: 收款人地址
-     * - value: 转账金额（wei）
-     */
-    struct Send {
-        address to;      // 收款人地址
-        uint256 value;  // 转账金额
-    }
+  /**
+   * @notice 带 nonce + deadline 的结构（防重放 + 支持过期）
+   */
+  struct SendWithNonce {
+    address to;
+    uint256 value;
+    uint256 nonce;
+    uint256 deadline;
+  }
 
-    // ============================================================
-    // 类型哈希常量
-    // ============================================================
+  // ============================================================
+  // 类型哈希常量
+  // ============================================================
 
-    /**
-     * @notice Send 结构的类型哈希
-     * @dev 用于 EIP-712 签名消息构建
-     *
-     * 计算方式：
-     * keccak256("Send(address to,uint256 value)")
-     *
-     * 注意：类型名称必须与结构体名称完全一致
-     */
-    bytes32 public constant SEND_TYPEHASH = keccak256("Send(address to,uint256 value)");
+  /**
+   * @notice Send 结构的类型哈希
+   * @dev 用于 EIP-712 签名消息构建
+   *
+   * 计算方式：
+   * keccak256("Send(address to,uint256 value)")
+   *
+   * 注意：类型名称必须与结构体名称完全一致
+   */
+  bytes32 public constant SEND_TYPEHASH = keccak256('Send(address to,uint256 value)');
 
-    // ============================================================
-    // 构造函数
-    // ============================================================
+  /// @notice 带 nonce/deadline 的类型哈希
+  bytes32 public constant SEND_WITH_NONCE_TYPEHASH =
+    keccak256('SendWithNonce(address to,uint256 value,uint256 nonce,uint256 deadline)');
 
-    /**
-     * @dev 构造函数，初始化 EIP-712 域名分隔符
-     *
-     * EIP-712 Domain Separator：
-     * - name: 合约/应用名称（EIP712Verifier）
-     * - version: 签名方案版本（1.0.0）
-     * - chainId: 链 ID（自动从 EVM 获取）
-     * - verifyingContract: 验证合约地址（自动设置）
-     *
-     * 作用：
-     * - 防止跨链重放攻击
-     * - 防止跨合约重放攻击
-     */
-    constructor() EIP712("EIP712Verifier", "1.0.0") {}
+  /// @notice 每个 signer 的 nonce（用于防重放）
+  mapping(address => uint256) public nonces;
 
-    // ============================================================
-    // 核心函数
-    // ============================================================
+  // ============================================================
+  // 构造函数
+  // ============================================================
 
-    /**
-     * @notice 计算 Send 数据的 EIP-712 哈希
-     * @param send 转账数据结构
-     * @return bytes32 签名摘要
-     *
-     * 签名消息构建：
-     * 1. 域名分离器（domain separator）
-     * 2. 类型哈希（type hash）
-     * 3. 编码数据（abi.encode）
-     * 4. 最终哈希（keccak256）
-     *
-     * OpenZeppelin 实现使用 _hashTypedDataV4
-     */
-    function hashSend(Send memory send) public view returns (bytes32) {
-        return _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    SEND_TYPEHASH,
-                    send.to,
-                    send.value
-                )
-            )
-        );
-    }
+  /**
+   * @dev 构造函数，初始化 EIP-712 域名分隔符
+   *
+   * EIP-712 Domain Separator：
+   * - name: 合约/应用名称（EIP712Verifier）
+   * - version: 签名方案版本（1.0.0）
+   * - chainId: 链 ID（自动从 EVM 获取）
+   * - verifyingContract: 验证合约地址（自动设置）
+   *
+   * 作用：
+   * - 防止跨链重放攻击
+   * - 防止跨合约重放攻击
+   */
+  constructor() EIP712('EIP712Verifier', '1.0.0') {}
 
-    /**
-     * @notice 验证 EIP-712 签名
-     * @param signer 签名者地址（期望）
-     * @param send 转账数据
-     * @param signature 签名
-     * @return bool 签名是否有效
-     *
-     * 验证流程：
-     * 1. 计算数据哈希（hashSend）
-     * 2. 从签名恢复签名者地址（ECDSA.recover）
-     * 3. 比较恢复地址与期望地址
-     *
-     * 安全注意：
-     * - 签名验证应在状态更新之前
-     * - 考虑添加 nonce 防止重放攻击
-     * - 考虑添加过期时间
-     */
-    function verify(
-        address signer,
-        Send memory send,
-        bytes memory signature
-    ) public view returns (bool) {
-        bytes32 digest = hashSend(send);
-        return digest.recover(signature) == signer;
-    }
+  // ============================================================
+  // 核心函数
+  // ============================================================
 
-    /**
-     * @notice 通过 EIP-712 签名执行转账
-     * @param signer 签名者地址
-     * @param to 收款人地址
-     * @param value 转账金额
-     * @param signature 签名数据
-     *
-     * 完整流程：
-     * 1. 验证签名是否有效
-     * 2. 如果有效，执行 ETH 转账
-     *
-     * 安全注意：
-     * - 此实现存在重入风险（先验证后转账）
-     * - 实际使用应先更新状态再转账（Checks-Effects-Interactions）
-     * - 建议添加 nonce 和过期时间防止重放
-     *
-     * 攻击场景示例：
-     * 1. 签名者 A 授权向 B 转账 1 ETH
-     * 2. 攻击者 C 拦截签名
-     * 3. C 可以多次调用此函数（如果 nonce 未检查）
-     */
-    function sendByEIP712Signature(address signer, address to, uint256 value, bytes memory signature) public {
-        // 验证签名
-        require(verify(signer, Send({to: to, value: value}), signature), "Invalid signature");
+  /**
+   * @notice 计算 Send 数据的 EIP-712 哈希
+   * @param send 转账数据结构
+   * @return bytes32 签名摘要
+   *
+   * 签名消息构建：
+   * 1. 域名分离器（domain separator）
+   * 2. 类型哈希（type hash）
+   * 3. 编码数据（abi.encode）
+   * 4. 最终哈希（keccak256）
+   *
+   * OpenZeppelin 实现使用 _hashTypedDataV4
+   */
+  function hashSend(Send memory send) public view returns (bytes32) {
+    return _hashTypedDataV4(keccak256(abi.encode(SEND_TYPEHASH, send.to, send.value)));
+  }
 
-        // 执行转账
-        (bool success,) = to.call{value: value}("");
-        require(success, "Transfer failed");
-    }
+  /**
+   * @notice 计算 SendWithNonce 数据的 EIP-712 哈希
+   */
+  function hashSendWithNonce(SendWithNonce memory send) public view returns (bytes32) {
+    return
+      _hashTypedDataV4(keccak256(abi.encode(SEND_WITH_NONCE_TYPEHASH, send.to, send.value, send.nonce, send.deadline)));
+  }
+
+  /**
+   * @notice 验证 EIP-712 签名
+   * @param signer 签名者地址（期望）
+   * @param send 转账数据
+   * @param signature 签名
+   * @return bool 签名是否有效
+   *
+   * 验证流程：
+   * 1. 计算数据哈希（hashSend）
+   * 2. 从签名恢复签名者地址（ECDSA.recover）
+   * 3. 比较恢复地址与期望地址
+   *
+   * 安全注意：
+   * - 签名验证应在状态更新之前
+   * - 考虑添加 nonce 防止重放攻击
+   * - 考虑添加过期时间
+   */
+  function verify(address signer, Send memory send, bytes memory signature) public view returns (bool) {
+    bytes32 digest = hashSend(send);
+    return digest.recover(signature) == signer;
+  }
+
+  /**
+   * @notice 验证 SendWithNonce 的 EIP-712 签名
+   */
+  function verifyWithNonce(
+    address signer,
+    SendWithNonce memory send,
+    bytes memory signature
+  ) public view returns (bool) {
+    bytes32 digest = hashSendWithNonce(send);
+    return digest.recover(signature) == signer;
+  }
+
+  /**
+   * @notice 通过 EIP-712 签名执行转账
+   * @param signer 签名者地址
+   * @param to 收款人地址
+   * @param value 转账金额
+   * @param signature 签名数据
+   *
+   * 完整流程：
+   * 1. 验证签名是否有效
+   * 2. 如果有效，执行 ETH 转账
+   *
+   * 安全注意：
+   * - 此实现存在重入风险（先验证后转账）
+   * - 实际使用应先更新状态再转账（Checks-Effects-Interactions）
+   * - 建议添加 nonce 和过期时间防止重放
+   *
+   * 攻击场景示例：
+   * 1. 签名者 A 授权向 B 转账 1 ETH
+   * 2. 攻击者 C 拦截签名
+   * 3. C 可以多次调用此函数（如果 nonce 未检查）
+   */
+  function sendByEIP712Signature(address signer, address to, uint256 value, bytes memory signature) public {
+    // 验证签名
+    require(verify(signer, Send({ to: to, value: value }), signature), 'Invalid signature');
+
+    // 执行转账
+    (bool success, ) = to.call{ value: value }('');
+    require(success, 'Transfer failed');
+  }
+
+  /**
+   * @notice 防重入 + 防重放（nonce）+ 过期（deadline）的安全版本
+   *
+   * 关键点：
+   * - 使用 nonReentrant 防止重入
+   * - 强制 deadline 未过期
+   * - 使用 signer 的当前 nonce 参与签名，并在外部调用前先递增 nonce（Checks-Effects-Interactions）
+   *
+   * 注意：
+   * - 为了演示“任何人可提交签名”，这里 signer 作为参数传入
+   * - 真实产品里通常还会加 value 上限、白名单 to、或更多业务约束
+   */
+  function sendByEIP712SignatureSafe(
+    address signer,
+    address to,
+    uint256 value,
+    uint256 deadline,
+    bytes calldata signature
+  ) external nonReentrant {
+    require(block.timestamp <= deadline, 'Signature expired');
+
+    uint256 currentNonce = nonces[signer];
+
+    // checks: 验证签名（签名里绑定了 nonce + deadline）
+    require(
+      verifyWithNonce(
+        signer,
+        SendWithNonce({ to: to, value: value, nonce: currentNonce, deadline: deadline }),
+        signature
+      ),
+      'Invalid signature'
+    );
+
+    // effects: 先更新 nonce，防止重入/重放
+    nonces[signer] = currentNonce + 1;
+
+    // interactions
+    (bool success, ) = to.call{ value: value }('');
+    require(success, 'Transfer failed');
+  }
 }

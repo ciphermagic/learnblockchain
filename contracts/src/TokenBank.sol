@@ -53,7 +53,8 @@ contract TokenBank {
     function depositEth(uint256 amount) external payable {
         require(amount > 0, "Amount must be greater than 0");
         address alice = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
-        payable(alice).transfer(amount);
+        (bool success, ) = payable(alice).call{value: amount}("");
+        require(success, "ETH transfer failed");
         emit Deposit(alice, amount);
     }
 

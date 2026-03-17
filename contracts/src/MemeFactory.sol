@@ -11,7 +11,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * @title MemeToken
  * @dev 基于 ERC20Upgradeable 的 Meme 代币实现，支持通过工厂合约铸造代币
  *      采用最小代理模式（EIP-1167）部署，降低 Gas 成本
- *      支持刻字（Inscription）模式的用户，每次铸造固定数量的代币
  */
 contract MemeToken is Initializable, ERC20Upgradeable {
     /// @dev 代币创建者地址，部署后不可修改
@@ -20,7 +19,7 @@ contract MemeToken is Initializable, ERC20Upgradeable {
     address public factory;
     /// @dev 代币总供应量（固定不可增发）
     uint256 public totalSupply_;
-    /// @dev 每次铸造的代币数量（刻字模式下固定值）
+    /// @dev 每次铸造的代币数量
     uint256 public perMint;
     /// @dev 每个代币的价格（以 Wei 为单位），用于计算购买费用
     uint256 public price;
@@ -83,7 +82,7 @@ contract MemeToken is Initializable, ERC20Upgradeable {
  * @title MemeFactory
  * @dev Meme 代币工厂合约，使用最小代理模式（EIP-1167）部署代币
  *      采用代理模式可以大幅降低代币部署的 Gas 成本（每次部署只需约 10 万 Gas）
- *      支持刻字模式（Inscription）：用户支付 ETH 后铸造固定数量的代币
+ *      用户支付 ETH 后铸造固定数量的代币
  *      项目方收取 1% 的费用作为收益
  */
 contract MemeFactory is Ownable {
@@ -116,7 +115,7 @@ contract MemeFactory is Ownable {
     }
 
     /**
-     * @dev 部署新的 Meme 代币（刻字模式）
+     * @dev 部署新的 Meme 代币
      * @param name 代币名称
      * @param symbol 代币符号
      * @param totalSupply 总供应量（固定）
@@ -151,7 +150,7 @@ contract MemeFactory is Ownable {
     }
 
     /**
-     * @dev 铸造 Meme 代币（购买刻字）
+     * @dev 铸造 Meme 代币
      * @param tokenAddr 代币地址
      * @notice 用户发送 ETH 购买代币，费用分配给项目方和创建者
      *         如果支付超过所需金额，多余的 ETH 会被退还

@@ -1,8 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "permit2-light-sdk/sdk/IPermit2.sol";
-import "permit2-light-sdk/sdk/ISignatureTransfer.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import 'permit2-light-sdk/sdk/IPermit2.sol';
+import 'permit2-light-sdk/sdk/ISignatureTransfer.sol';
 
 /**
  * @title TokenBank
@@ -34,138 +34,135 @@ import "permit2-light-sdk/sdk/ISignatureTransfer.sol";
  *      - 支持元交易（meta-transaction）
  */
 contract TokenBank {
-    /// @notice 代币合约接口
-    IERC20 public token;
+  /// @notice 代币合约接口
+  IERC20 public token;
 
-    /// @notice Permit2合约地址（Sepolia测试网地址）
-    /// @dev Permit2是Uniswap开发的统一授权协议，部署在多个链上
-    ///      主网和大多数测试网地址相同：0x000000000022D473030F116dDEE9F6B43aC78BA3
-    address public constant PERMIT2_ADDRESS = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+  /// @notice Permit2合约地址（Sepolia测试网地址）
+  /// @dev Permit2是Uniswap开发的统一授权协议，部署在多个链上
+  ///      主网和大多数测试网地址相同：0x000000000022D473030F116dDEE9F6B43aC78BA3
+  address public constant PERMIT2_ADDRESS = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-    /// @notice 记录每个用户存入的代币数量
-    mapping(address => uint256) public deposits;
+  /// @notice 记录每个用户存入的代币数量
+  mapping(address => uint256) public deposits;
 
-    /// @notice 存款事件
-    event Deposit(address indexed user, uint256 amount);
+  /// @notice 存款事件
+  event Deposit(address indexed user, uint256 amount);
 
-    /// @notice 取款事件
-    event Withdraw(address indexed user, uint256 amount);
+  /// @notice 取款事件
+  event Withdraw(address indexed user, uint256 amount);
 
-    /**
-     * @notice 构造函数，设置代币合约地址
-     * @param _tokenAddress ERC20代币合约地址
-     */
-    constructor(address _tokenAddress) {
-        require(_tokenAddress != address(0), "TokenBank: token address cannot be zero");
-        token = IERC20(_tokenAddress);
-    }
+  /**
+   * @notice 构造函数，设置代币合约地址
+   * @param _tokenAddress ERC20代币合约地址
+   */
+  constructor(address _tokenAddress) {
+    require(_tokenAddress != address(0), 'TokenBank: token address cannot be zero');
+    token = IERC20(_tokenAddress);
+  }
 
-    /**
-     * @notice 传统存入代币方式（需要先approve）
-     * @param _amount 存入数量
-     * @dev 前置条件：用户必须先调用token.approve(address(this), _amount)
-     */
-    function deposit(uint256 _amount) external {
-        require(_amount > 0, "TokenBank: deposit amount must be greater than zero");
-        require(token.balanceOf(msg.sender) >= _amount, "TokenBank: insufficient token balance");
+  /**
+   * @notice 传统存入代币方式（需要先approve）
+   * @param _amount 存入数量
+   * @dev 前置条件：用户必须先调用token.approve(address(this), _amount)
+   */
+  function deposit(uint256 _amount) external {
+    require(_amount > 0, 'TokenBank: deposit amount must be greater than zero');
+    require(token.balanceOf(msg.sender) >= _amount, 'TokenBank: insufficient token balance');
 
-        bool success = token.transferFrom(msg.sender, address(this), _amount);
-        require(success, "TokenBank: transfer failed");
+    bool success = token.transferFrom(msg.sender, address(this), _amount);
+    require(success, 'TokenBank: transfer failed');
 
-        deposits[msg.sender] += _amount;
+    deposits[msg.sender] += _amount;
 
-        emit Deposit(msg.sender, _amount);
-    }
+    emit Deposit(msg.sender, _amount);
+  }
 
-    /**
-     * @notice 使用Permit2进行授权转账并存款
-     * @param _amount 存入数量
-     * @param _nonce Permit2的nonce（用于防止签名重放）
-     * @param _deadline 签名有效期截止时间（Unix时间戳）
-     * @param _signature 用户的签名数据
-     * @dev 执行流程：
-     *      1. 检查金额和余额
-     *      2. 构造Permit2所需的参数结构体
-     *      3. 调用Permit2.permitTransferFrom()验证签名并转移代币
-     *      4. 更新存款记录
-     *
-     *      前置条件：
-     *      - 用户必须先授权Permit2合约：token.approve(PERMIT2_ADDRESS, type(uint256).max)
-     *      - 用户必须在链下签名授权消息
-     *
-     *      Permit2参数说明：
-     *      - PermitTransferFrom：包含授权信息（token、amount、nonce、deadline）
-     *      - SignatureTransferDetails：包含转账目标（to、requestedAmount）
-     *      - msg.sender：签名者地址
-     *      - _signature：用户的签名数据
-     *
-     *      安全机制：
-     *      - nonce：防止签名重放攻击
-     *      - deadline：防止过期签名被使用
-     *      - Permit2合约内部验证签名有效性
-     */
-    function depositWithPermit2(
-        uint256 _amount,
-        uint256 _nonce,
-        uint256 _deadline,
-        bytes calldata _signature
-    ) external {
-        require(_amount > 0, "TokenBank: deposit amount must be greater than zero");
-        require(token.balanceOf(msg.sender) >= _amount, "TokenBank: insufficient token balance");
+  /**
+   * @notice 使用Permit2进行授权转账并存款
+   * @param _amount 存入数量
+   * @param _nonce Permit2的nonce（用于防止签名重放）
+   * @param _deadline 签名有效期截止时间（Unix时间戳）
+   * @param _signature 用户的签名数据
+   * @dev 执行流程：
+   *      1. 检查金额和余额
+   *      2. 构造Permit2所需的参数结构体
+   *      3. 调用Permit2.permitTransferFrom()验证签名并转移代币
+   *      4. 更新存款记录
+   *
+   *      前置条件：
+   *      - 用户必须先授权Permit2合约：token.approve(PERMIT2_ADDRESS, type(uint256).max)
+   *      - 用户必须在链下签名授权消息
+   *
+   *      Permit2参数说明：
+   *      - PermitTransferFrom：包含授权信息（token、amount、nonce、deadline）
+   *      - SignatureTransferDetails：包含转账目标（to、requestedAmount）
+   *      - msg.sender：签名者地址
+   *      - _signature：用户的签名数据
+   *
+   *      安全机制：
+   *      - nonce：防止签名重放攻击
+   *      - deadline：防止过期签名被使用
+   *      - Permit2合约内部验证签名有效性
+   *
+   * @notice 使用 Permit2 进行授权转账并存款
+   * @dev 注意：
+   *      当前实现要求调用者必须是签名者本人。
+   *      因为 permitTransferFrom() 的 owner 参数传入的是 msg.sender，
+   *      而 Permit2 要求 owner 必须是签名者和代币所有者。
+   *      因此第三方即使拿到有效签名，也无法代替用户提交交易。
+   *
+   *      若要支持 relayer / meta-transaction，应将 owner 作为函数参数传入，
+   *      并在成功转账后将存款记入 owner 名下，而不是 msg.sender。
+   */
+  function depositWithPermit2(uint256 _amount, uint256 _nonce, uint256 _deadline, bytes calldata _signature) external {
+    require(_amount > 0, 'TokenBank: deposit amount must be greater than zero');
+    require(token.balanceOf(msg.sender) >= _amount, 'TokenBank: insufficient token balance');
 
-        // 构造Permit2所需的授权参数
-        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({
-                token: address(token),
-                amount: _amount
-            }),
-            nonce: _nonce,
-            deadline: _deadline
-        });
+    // 构造Permit2所需的授权参数
+    ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+      permitted: ISignatureTransfer.TokenPermissions({ token: address(token), amount: _amount }),
+      nonce: _nonce,
+      deadline: _deadline
+    });
 
-        // 构造转账目标参数
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
-            to: address(this),
-            requestedAmount: _amount
-        });
+    // 构造转账目标参数
+    ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
+      to: address(this),
+      requestedAmount: _amount
+    });
 
-        // 调用Permit2合约进行授权转账
-        IPermit2(PERMIT2_ADDRESS).permitTransferFrom(
-            permit,
-            transferDetails,
-            msg.sender,
-            _signature
-        );
+    // 调用Permit2合约进行授权转账
+    IPermit2(PERMIT2_ADDRESS).permitTransferFrom(permit, transferDetails, msg.sender, _signature);
 
-        deposits[msg.sender] += _amount;
+    deposits[msg.sender] += _amount;
 
-        emit Deposit(msg.sender, _amount);
-    }
+    emit Deposit(msg.sender, _amount);
+  }
 
-    /**
-     * @notice 提取代币
-     * @param _amount 提取数量
-     * @dev 安全机制：先减少记录再转账，防止重入攻击
-     */
-    function withdraw(uint256 _amount) external {
-        require(_amount > 0, "TokenBank: withdraw amount must be greater than zero");
-        require(deposits[msg.sender] >= _amount, "TokenBank: insufficient deposit balance");
+  /**
+   * @notice 提取代币
+   * @param _amount 提取数量
+   * @dev 安全机制：先减少记录再转账，防止重入攻击
+   */
+  function withdraw(uint256 _amount) external {
+    require(_amount > 0, 'TokenBank: withdraw amount must be greater than zero');
+    require(deposits[msg.sender] >= _amount, 'TokenBank: insufficient deposit balance');
 
-        // 先减少记录，防止重入攻击
-        deposits[msg.sender] -= _amount;
+    // 先减少记录，防止重入攻击
+    deposits[msg.sender] -= _amount;
 
-        bool success = token.transfer(msg.sender, _amount);
-        require(success, "TokenBank: transfer failed");
+    bool success = token.transfer(msg.sender, _amount);
+    require(success, 'TokenBank: transfer failed');
 
-        emit Withdraw(msg.sender, _amount);
-    }
+    emit Withdraw(msg.sender, _amount);
+  }
 
-    /**
-     * @notice 查询用户在银行中的存款余额
-     * @param _user 用户地址
-     * @return 存款余额
-     */
-    function balanceOf(address _user) external view returns (uint256) {
-        return deposits[_user];
-    }
+  /**
+   * @notice 查询用户在银行中的存款余额
+   * @param _user 用户地址
+   * @return 存款余额
+   */
+  function balanceOf(address _user) external view returns (uint256) {
+    return deposits[_user];
+  }
 }

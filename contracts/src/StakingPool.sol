@@ -252,7 +252,8 @@ contract StakingPool is IStaking {
         }
 
         // 将ETH转回给用户
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "ETH transfer failed");
         // 触发取消质押事件
         emit Unstaked(msg.sender, amount);
     }
@@ -336,7 +337,8 @@ contract StakingPool is IStaking {
         uint256 balance = address(this).balance;
         // 如果余额大于0，则转给所有者
         if (balance > 0) {
-            payable(owner).transfer(balance);
+            (bool success, ) = payable(owner).call{value: balance}("");
+            require(success, "ETH transfer failed");
         }
     }
 
