@@ -109,3 +109,6 @@ wallet.json
 
 # additional foundry artifacts
 broadcast/
+
+DApp_ideas.md
+.history/
