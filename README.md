@@ -46,6 +46,7 @@
 | BaseERC20.sol | 符合ERC-20标准的代币合约实现，提供代币转账、授权等功能 | script/BaseERC20.s.sol |
 | MyERC1363Token.sol | 支持ERC-1363标准的代币合约实现，提供转账并调用接收者合约的回调功能 | script/MyERC1363Token.s.sol |
 | PermitERC20.sol | 支持EIP-2612 Permit功能的ERC-20代币合约，允许无gas代币授权的离线签名 | script/PermitERC20.s.sol |
+| Rebase_Token.sol | 通缩型 Rebase Token 实现，参考 Ampleforth 原理，使用 gons 机制实现每年 1% 通缩，所有用户余额同步变化 | script/Rebase_Token.s.sol |
 | 🔹 ERC-721 NFT合约 | | |
 | MinimalERC721.sol | 最小化的ERC-721 NFT合约实现，支持NFT铸造、转移和枚举功能 | script/MinimalERC721.s.sol |
 | ERC721_Upgrade.sol | 可升级ERC-721 NFT合约，使用UUPS代理模式实现合约升级功能，支持NFT铸造、转移和权限管理 | test/ERC721_Upgrade.t.sol<br>script/ERC721_Upgrade.s.sol |
