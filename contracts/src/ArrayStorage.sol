@@ -66,10 +66,10 @@ contract ArrayStorage {
      * @dev 构造函数，初始化测试数据
      *
      * 初始化 11 个 LockInfo：
-     * - i = 0: user = 0x1, startTime = block.timestamp * 2 - 0, amount = 1e18
-     * - i = 1: user = 0x2, startTime = block.timestamp * 2 - 1, amount = 2e18
+     * - i = 0: user = 0x1, startTime = block.timestamp - 0, amount = 1e18
+     * - i = 1: user = 0x2, startTime = block.timestamp - 1, amount = 2e18
      * - ...
-     * - i = 10: user = 0xB, startTime = block.timestamp * 2 - 10, amount = 11e18
+     * - i = 10: user = 0xB, startTime = block.timestamp - 10, amount = 11e18
      *
      * 注意：
      * - 使用 address(uint160(i + 1)) 避免类型转换警告
@@ -81,9 +81,8 @@ contract ArrayStorage {
             // 构造地址：address(1) 到 address(11)
             address user = address(uint160(i + 1));
 
-            // 构造时间戳：block.timestamp * 2 - i
-            // 乘以 2 是为了演示，实际使用中不应这样做
-            uint64 startTime = uint64(block.timestamp * 2 - i);
+            // 构造时间戳：block.timestamp - i
+            uint64 startTime = uint64(block.timestamp - i);
 
             // 构造金额：1e18 * (i + 1)，即 1 到 11 ETH
             uint256 amount = 1e18 * (i + 1);

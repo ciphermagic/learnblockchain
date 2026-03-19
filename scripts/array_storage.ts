@@ -22,7 +22,7 @@ import { keccak256, pad, slice, toHex, hexToBigInt } from 'viem/utils';
 
 // 替换为你要读取的合约地址
 // 这个合约应该有一个名为 _locks 的数组类型状态变量
-const contractAddress = '0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E';
+const contractAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
 
 // 创建公共客户端
 const client = createPublicClient({
@@ -99,12 +99,10 @@ async function readLocks() {
     });
 
     // ========== 步骤 6: 解析存储数据 ==========
-    // 解析 user: 从 slot1 的前 20 bytes（地址长度）
-    // slice(slot1, 12) 跳过前 12 bytes（24 个十六进制字符），保留后 20 bytes
+    // ←──────────── 高位（左）───────────── 低位（右）──→
+    // [ 00 00 00 00 ][ startTime 8字节 ][ user 20字节 ]
     const user = slice(slot1, 12); // 从 byte 12 开始的 20 bytes (address)
-
-    // 解析 startTime: slot1 的后 8 bytes (bytes 24-31)
-    const startTimeHex = slice(slot1, 24, 32);
+    const startTimeHex = slice(slot1, 4, 12);
     const startTime = hexToBigInt(startTimeHex);
 
     // 解析 amount: 直接解析 slot2
