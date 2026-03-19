@@ -2,20 +2,35 @@
  * EIP-712 签名生成工具
  * 用于为白名单用户生成签名
  *
+ * EIP-712 是一种以太坊改进提案，定义了一种结构化数据的签名标准
+ * 与普通以太坊签名不同，EIP-712 签名包含了具体的数据结构，使得签名更加安全和用户友好
+ *
  * 使用方法:
  * npm install ethers
  * node scripts/generate_eip712_signature.js
+ *
+ * 核心概念:
+ * - Domain: 定义签名的域信息，包括合约名称、版本、链ID等
+ * - Types: 定义签名的数据结构
+ * - Value: 要签名的具体数据
+ *
+ * 安全性提示:
+ * - 签名具有时效性（通过 expiry 参数控制）
+ * - 每个用户有唯一的 nonce，防止重放攻击
+ * - 签名者地址应该与合约部署者地址一致
  */
 
 import fs from 'fs';
 import { ethers } from 'ethers';
 
 // ============================================
-// 配置区
+// 配置区 - 在此修改相关配置
 // ============================================
 
 // 签名者私钥（这是测试私钥，不要在生产环境使用！）
-// 在生产环境中，应该使用 HSM 或者安全的密钥管理服务
+// 在生产环境中，应该使用 HSM（硬件安全模块）或者安全的密钥管理服务
+// 这里使用的是 Foundry/Anvil 默认的第一个测试账户私钥
+// 实际使用时替换为你的签名者私钥（需要带 0x 前缀）
 
 const SIGNER_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; //  测试账户 #0
 
@@ -23,6 +38,13 @@ const SIGNER_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae
 const CONTRACT_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3'; // 替换为你的合约地址
 
 // 链 ID
+// 常见链 ID:
+// 1 = Ethereum Mainnet (主网)
+// 5 = Goerli Testnet (测试网，已弃用)
+// 11155111 = Sepolia Testnet (当前推荐的测试网)
+// 31337 = Anvil/Foundry 本地测试网络
+// 42161 = Arbitrum One
+// 10 = Optimism
 const CHAIN_ID = 31337; // 本地测试网，生产环境需要改为 1 (主网) 或 11155111 (Sepolia)
 
 // 要签名的用户地址列表
@@ -33,21 +55,29 @@ const USERS_TO_SIGN = [
 ];
 
 // ============================================
-// EIP-712 Domain 和 Types
+// EIP-712 Domain 和 Types 定义
 // ============================================
 
+// Domain Separator (域分隔符)
+// 用于确保签名只能在特定的合约和链上使用，防止跨链重放攻击
 const domain = {
-  name: 'Whitelist',
-  version: '1.0.0',
-  chainId: CHAIN_ID,
-  verifyingContract: CONTRACT_ADDRESS,
+  name: 'Whitelist', // 合约名称，需要与合约中定义的一致
+  version: '1.0.0', // 合约版本号
+  chainId: CHAIN_ID, // 链 ID，防止跨链重放攻击
+  verifyingContract: CONTRACT_ADDRESS, // 验证签名的合约地址
 };
 
+// Types (类型定义)
+// 定义签名的数据结构，类似于 TypeScript 接口
+// 这里定义了一个 WhitelistRequest 类型，包含三个字段:
+// - user: 要白名单的用户地址
+// - nonce: 随机数，防止重放攻击
+// - expiry: 过期时间戳，过期后签名无效
 const types = {
   WhitelistRequest: [
-    { name: 'user', type: 'address' },
-    { name: 'nonce', type: 'uint256' },
-    { name: 'expiry', type: 'uint256' },
+    { name: 'user', type: 'address' }, // 用户地址
+    { name: 'nonce', type: 'uint256' }, // 随机数，建议使用合约中的 nonce
+    { name: 'expiry', type: 'uint256' }, // 过期时间戳（Unix 时间戳，单位：秒）
   ],
 };
 
@@ -55,6 +85,24 @@ const types = {
 // 签名生成函数
 // ============================================
 
+/**
+ * 为指定用户生成 EIP-712 签名
+ * @param {string} userAddress - 用户的钱包地址（0x 开头）
+ * @param {number} nonce - 用户当前的 nonce 值（从合约查询，防止重放攻击）
+ * @param {number} expiryHours - 签名有效期的小时数
+ * @returns {Promise<object>} 包含签名数据的对象
+ *
+ * 工作原理:
+ * 1. 使用 ethers.Wallet 创建签名者
+ * 2. 计算过期时间（当前时间 + 有效期）
+ * 3. 构建要签名的数据结构
+ * 4. 使用 signTypedData 方法进行 EIP-712 签名
+ *
+ * 签名算法:
+ * - 先对数据进行哈希，生成 digest
+ * - 然后用私钥对 digest 进行签名
+ * - 最终得到 65 字节的签名（r, s, v）
+ */
 async function generateSignature(userAddress, nonce = 0, expiryHours = 24) {
   // 创建签名者
   const signer = new ethers.Wallet(SIGNER_PRIVATE_KEY);
@@ -87,6 +135,20 @@ async function generateSignature(userAddress, nonce = 0, expiryHours = 24) {
 // 验证签名函数
 // ============================================
 
+/**
+ * 验证 EIP-712 签名的有效性
+ * 通过恢复签名者的地址来验证签名
+ * @param {object} signatureData - 包含 user, nonce, expiry, signature 的对象
+ * @returns {string} 恢复出的签名者地址
+ *
+ * 验证原理:
+ * - EIP-712 签名是基于椭圆曲线的签名
+ * - 给定签名数据，可以通过数学方法恢复出签名者的公钥/地址
+ * - 如果恢复的地址与签名者地址一致，则说明签名有效
+ *
+ * 注意: 这里只验证签名本身的有效性
+ * 实际的业务验证（如检查 nonce、expiry）需要在合约中进行
+ */
 function verifySignature(signatureData) {
   const { user, nonce, expiry, signature } = signatureData;
 
