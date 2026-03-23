@@ -100,7 +100,7 @@ async function sendTransactionWithKeystore(): Promise<Hash> {
      */
     const keystoreContent = readFileSync(join(process.cwd(), keystorePath), 'utf-8');
     const keystore = JSON.parse(keystoreContent);
-    console.log('📂 已读取 Keystore 文件:', keystorePath);
+    console.log('📂 已读取 Keystore 文件:', keystore);
 
     // ==================== 步骤 3: 解密 Keystore ====================
     /**

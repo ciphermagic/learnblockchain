@@ -37,7 +37,6 @@ import {
   createWalletClient,
   http,
   encodeFunctionData,
-  getContract,
   formatEther,
   zeroAddress,
 } from 'viem';

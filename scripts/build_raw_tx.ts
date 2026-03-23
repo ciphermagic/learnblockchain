@@ -39,7 +39,7 @@ dotenv.config();
  * 6. 签名并发送交易
  * 7. 等待交易确认并获取收据
  */
-async function sendTransactionExample(): Promise<Hash> {
+async function sendTransactionExample() {
   try {
     // ==================== 步骤 1: 账户初始化 ====================
     // 从环境变量获取私钥（注意：私钥必须以 0x 开头）
@@ -188,20 +188,31 @@ async function sendTransactionExample(): Promise<Hash> {
     console.log('📤 交易已发送（方式1）');
     console.log('🔖 交易哈希:', txHash1);
 
+    // 等待方式1确认，再获取新的 nonce
+    await publicClient.waitForTransactionReceipt({ hash: txHash1 });
+
+    // 重新获取 nonce（此时 nonce 已更新）
+    const newNonce = await publicClient.getTransactionCount({ address: userAddress });
+
+    const preparedTx2 = await prepareTransactionRequest(publicClient, {
+      ...preparedTx,
+      nonce: newNonce,
+    });
+
     // 方式 2：手动签名后发送
     // 步骤 1: 使用钱包客户端对交易进行签名
     // 签名过程：使用私钥对交易数据进行哈希运算
-    const signedTx = await walletClient.signTransaction(preparedTx);
+    const signedTx = await walletClient.signTransaction(preparedTx2);
     console.log('✍️ 已签名交易:', signedTx);
 
     // 步骤 2: 使用公共客户端发送已签名交易
     // sendRawTransaction 相当于 eth_sendRawTransaction RPC 方法
     // 这是将交易广播到网络的方式
-    const txHash = await publicClient.sendRawTransaction({
+    const txHash2 = await publicClient.sendRawTransaction({
       serializedTransaction: signedTx,
     });
     console.log('📤 交易已广播（方式2）');
-    console.log('🔖 交易哈希:', txHash);
+    console.log('🔖 交易哈希:', txHash2);
 
     // ==================== 步骤 8: 等待交易确认 ====================
     /**
@@ -216,12 +227,18 @@ async function sendTransactionExample(): Promise<Hash> {
      * - transactionIndex: 交易在区块中的索引位置
      * - logs: 交易产生的事件日志
      */
-    const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    console.log('方式一交易结果...');
+    const receipt: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash1 });
     console.log('🎉 交易状态:', receipt.status === 'success' ? '✅ 成功' : '❌ 失败');
     console.log('📦 区块号:', receipt.blockNumber);
     console.log('⛽ Gas 使用量:', receipt.gasUsed.toString());
 
-    return txHash;
+    console.log('方式二交易结果...');
+    const receipt2: TransactionReceipt = await publicClient.waitForTransactionReceipt({ hash: txHash2 });
+    console.log('🎉 交易状态:', receipt2.status === 'success' ? '✅ 成功' : '❌ 失败');
+    console.log('📦 区块号:', receipt2.blockNumber);
+    console.log('⛽ Gas 使用量:', receipt2.gasUsed.toString());
+
   } catch (error) {
     console.error('❌ 错误:', error);
     if (error instanceof Error) {
