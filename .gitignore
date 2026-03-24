@@ -75,12 +75,14 @@ contracts/deployments/
 **/keystore/
 **/wallets/
 *.key
+*.keys/
 *.secret
 *.private
 *.p12
 *.pfx
 **/private/**
 **/keys/**
+**/.keys/**
 
 # API keys and credentials
 *.cer

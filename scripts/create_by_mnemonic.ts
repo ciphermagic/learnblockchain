@@ -23,9 +23,8 @@
 import { privateKeyToAccount } from 'viem/accounts';
 import { HDKey } from '@scure/bip32';
 import { Buffer } from 'node:buffer';
-
-// 直接 require 避免 TypeScript 类型问题
-const { mnemonicToSeedSync } = require('@scure/bip39');
+import { mnemonicToSeedSync } from '@scure/bip39';
+import { keccak256 } from 'viem';
 
 // ========== 步骤 1: 使用助记词 ==========
 // 这里使用固定的助记词用于演示
@@ -51,7 +50,8 @@ console.log('助记词：', mnemonic);
 // 种子 = PBKDF2(mnemonic, "mnemonic" + 可选密码, 2048, 64, 'sha512')
 const seed = mnemonicToSeedSync(mnemonic);
 
-console.log('种子（哈希）：', seed.toString('hex').slice(0, 32) + '...');
+const hash = keccak256(seed);
+console.log('种子（哈希）：', hash);
 
 // ========== 步骤 3: 从种子派生主 HD 密钥 ==========
 

@@ -89,7 +89,7 @@ function generateMerkleTree(addresses) {
     return ethers.keccak256(ethers.solidityPacked(['address'], [checksummedAddr]));
   });
 
-  console.log('✅ 叶子节点生成完成\n');
+  console.log('✅ 叶子节点生成完成\n', leaves);
 
   // 2. 构建 Merkle Tree (sortPairs 很重要，要和合约保持一致)
   const tree = new MerkleTree(leaves, ethers.keccak256, { sortPairs: true });
@@ -97,7 +97,7 @@ function generateMerkleTree(addresses) {
   // 3. 获取 Merkle Root
   const root = tree.getHexRoot();
 
-  console.log('🌳 Merkle Tree 信息:');
+  console.log('\n🌳 Merkle Tree 信息:');
   console.log('================================');
   console.log(`Root: ${root}`);
   console.log(`叶子节点数量: ${leaves.length}`);
