@@ -1,6 +1,5 @@
 import {
   createPublicClient,
-  createWalletClient,
   http,
   formatEther,
   parseAbi,
@@ -9,7 +8,6 @@ import {
   type TransactionRequest,
   decodeFunctionData,
   encodeFunctionData,
-  hexToNumber,
   parseEther,
 } from 'viem';
 import { foundry } from 'viem/chains';
@@ -129,10 +127,8 @@ const ERC20_ABI = parseAbi([
 
 class TransactionSimulator {
   private publicClient;
-  private anvilUrl: string;
 
   constructor(anvilUrl: string) {
-    this.anvilUrl = anvilUrl;
     this.publicClient = createPublicClient({
       chain: foundry,
       transport: http(anvilUrl),

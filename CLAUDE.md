@@ -96,7 +96,7 @@ pnpm lint
 pnpm tsx scripts/index.ts
 
 # 运行特定脚本
-pnpm tsx scripts/scanERC20Transfers.ts
+pnpm tsx scripts/watchTransfer.ts
 
 # 运行交易模拟
 pnpm tsx scripts/simulator_example.ts

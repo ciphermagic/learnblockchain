@@ -121,11 +121,10 @@
 | keystore_utils.js | Keystore格式加密与解密核心工具类的集合 |
 | merkle_tree_data.json | 存储Merkle树构造原始数据和节点哈希值的JSON文件 |
 | mpc_tx.js | 使用多方计算（MPC）方法生成分布式钱包交易签名的高级脚本 |
-| scanERC20Transfers.ts | 扫描历史区块中的ERC-20代币转账事件并展示详细数据的监控脚本 |
 | sign_verify.ts | 演示消息签名生成和链下验证机制的签名和验证演示脚本 |
 | simulator_example.ts | 使用交易模拟器验证交易参数和预估Gas使用的模拟工具示例 |
 | transaction_simulator.ts | 交易模拟器主类，支持多种模拟方法预估Gas和验证交易有效性 |
-| watchTransfer.ts | 实时监听并处理新产生的ERC-20代币转账事件的事件监听脚本 |
+| watchTransfer.ts | 扫描历史区块并实时监听新产生的ERC-20代币转账事件，同时提供本地查询 API 的监控脚本 |
 | watchTransferEth.ts | 实时监听并处理ETH转账交易，监控账户ETH流动的脚本 |
 | weth.ts | 与WETH（封装以太币）合约交互的演示脚本，实现ETH/WETH兑换 |
 

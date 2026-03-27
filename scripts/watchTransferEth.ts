@@ -123,12 +123,6 @@ const main = async () => {
     console.log('监听已停止');
     process.exit(0);
   });
-
-  // ========== 错误处理 ==========
-  // WebSocket 可能因为网络问题断开连接
-  publicClient.onError => {
-    console.error('WebSocket 错误:', error);
-  };
 };
 
 /**
